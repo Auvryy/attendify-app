@@ -3,6 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
 import 'login_screen.dart'; // import login
+import 'employee/employee_main_layout.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -26,7 +27,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
 
-  final _barangays = const ['Barangay A', 'Barangay B', 'Barangay C'];
+  final _barangays = const ['Barangay Masico', 'Barangay Pansol', 'Barangay San Miguel'];
 
   @override
   void dispose() {
@@ -39,19 +40,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  void _handleSignUp() {
-    if (!_formKey.currentState!.validate()) return;
+void _handleSignUp() {
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
 
-    // TODO: implement sign up logic
+  // TODO: implement sign up logic with API call
 
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    });
-  }
+  // For debugging: Navigate to Employee Main Layout after 2 seconds
+  Future.delayed(const Duration(seconds: 2), () {
+    if (mounted) {
+      setState(() => _isLoading = false);
+      
+      // Navigate to Employee Main Layout (with bottom navigation)
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const EmployeeMainLayout(),
+        ),
+      );
+    }
+  });
+}
 
   @override
   Widget build(BuildContext context) {
