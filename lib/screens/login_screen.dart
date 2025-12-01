@@ -4,6 +4,7 @@ import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/logo_widget.dart';
 import '../screens/signup_screen.dart';
+import 'admin/admin_main_layout.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,9 +30,13 @@ class _LoginScreenState extends State<LoginScreen> {
   void _handleLogin() {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      // TODO: Implement login logic
-      Future.delayed(const Duration(seconds: 2), () {
+      // Navigate to Admin page for debugging
+      Future.delayed(const Duration(seconds: 1), () {
         setState(() => _isLoading = false);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AdminMainLayout()),
+        );
       });
     }
   }
