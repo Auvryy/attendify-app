@@ -1,14 +1,36 @@
 // lib/screens/employee/employee_home_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/attendance_provider.dart';
+import 'attendance_history_screen.dart';
+import 'file_leave_screen.dart';
 
-class EmployeeHomeScreen extends StatelessWidget {
+class EmployeeHomeScreen extends StatefulWidget {
   const EmployeeHomeScreen({super.key});
 
   @override
+  State<EmployeeHomeScreen> createState() => _EmployeeHomeScreenState();
+}
+
+class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch today's attendance on load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AttendanceProvider>().fetchTodayAttendance();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final user = auth.user;
+    
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -27,7 +49,7 @@ class EmployeeHomeScreen extends StatelessWidget {
                     const SizedBox(height: 20),
                     
                     // QR Code Card
-                    _buildQRCodeCard(),
+                    _buildQRCodeCard(user?.qrCode ?? user?.id ?? 'NO-QR'),
                     
                     const SizedBox(height: 30),
                     
@@ -35,16 +57,24 @@ class EmployeeHomeScreen extends StatelessWidget {
                     _buildMenuItem(
                       title: 'Attendance History',
                       onTap: () {
-                        // Navigate to attendance history
-                        Navigator.pushNamed(context, '/employee/attendance-history');
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AttendanceHistoryScreen(),
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(height: 15),
                     _buildMenuItem(
                       title: 'File Leave',
                       onTap: () {
-                        // Navigate to file leave
-                        Navigator.pushNamed(context, '/employee/file-leave');
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const FileLeaveScreen(),
+                          ),
+                        );
                       },
                     ),
                   ],
@@ -130,9 +160,7 @@ class EmployeeHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQRCodeCard() {
-    final String employeeQRData = 'EMP-001-2025';
-    
+  Widget _buildQRCodeCard(String qrData) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -165,7 +193,7 @@ class EmployeeHomeScreen extends StatelessWidget {
                 ),
               ),
               child: QrImageView(
-                data: employeeQRData,
+                data: qrData,
                 version: QrVersions.auto,
                 size: 200.0,
                 backgroundColor: AppColors.white,

@@ -1,16 +1,35 @@
 // lib/screens/admin/admin_home_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/admin_provider.dart';
 import 'admin_attendance_history_screen.dart';
 import 'admin_leave_requests_screen.dart';
 
-class AdminHomeScreen extends StatelessWidget {
+class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
 
   @override
+  State<AdminHomeScreen> createState() => _AdminHomeScreenState();
+}
+
+class _AdminHomeScreenState extends State<AdminHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AdminProvider>().fetchDashboard();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final user = auth.user;
+    
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -41,7 +60,7 @@ class AdminHomeScreen extends StatelessWidget {
                     const SizedBox(height: 20),
 
                     // QR Code Card - Centered
-                    Center(child: _buildQRCodeCard()),
+                    Center(child: _buildQRCodeCard(user?.qrCode ?? user?.id ?? 'ADMIN-QR')),
 
                     const SizedBox(height: 30),
 
@@ -166,7 +185,7 @@ class AdminHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQRCodeCard() {
+  Widget _buildQRCodeCard(String qrData) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -189,7 +208,7 @@ class AdminHomeScreen extends StatelessWidget {
                 ),
               ),
               child: QrImageView(
-                data: 'ADMIN-ATTENDIFY-2025',
+                data: qrData,
                 version: QrVersions.auto,
                 size: 180.0,
                 backgroundColor: AppColors.white,

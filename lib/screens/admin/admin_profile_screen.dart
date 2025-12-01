@@ -1,14 +1,30 @@
 // lib/screens/admin/admin_profile_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/user_provider.dart';
 import '../employee/account_security_screen.dart';
 import '../employee/notification_settings_screen.dart';
 import '../employee/about_us_screen.dart';
 import '../login_screen.dart';
 
-class AdminProfileScreen extends StatelessWidget {
+class AdminProfileScreen extends StatefulWidget {
   const AdminProfileScreen({super.key});
+
+  @override
+  State<AdminProfileScreen> createState() => _AdminProfileScreenState();
+}
+
+class _AdminProfileScreenState extends State<AdminProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<UserProvider>().fetchProfile();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,141 +38,161 @@ class AdminProfileScreen extends StatelessWidget {
 
             // Main content
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    // Admin Label
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Admin',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-
-                    // Profile Avatar
-                    Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.divider,
-                      ),
-                      child: const Icon(
-                        Icons.person,
-                        color: AppColors.white,
-                        size: 60,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Admin Name
-                    const Text(
-                      'Full Name',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    const Text(
-                      'Role',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-
-                    // Profile Section
-                    _buildSectionLabel('Profile'),
-                    const SizedBox(height: 10),
-                    _buildMenuItem(
-                      context: context,
-                      title: 'Account & Security',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AccountSecurityScreen(),
-                          ),
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // Settings Section
-                    _buildSectionLabel('Settings'),
-                    const SizedBox(height: 10),
-                    _buildMenuItem(
-                      context: context,
-                      title: 'Notification Settings',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const NotificationSettingsScreen(),
-                          ),
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // Details Section
-                    _buildSectionLabel('Details'),
-                    const SizedBox(height: 10),
-                    _buildMenuItem(
-                      context: context,
-                      title: 'About us',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AboutUsScreen(),
-                          ),
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    // Logout Button
-                    SizedBox(
-                      width: 180,
-                      height: 45,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          _showLogoutDialog(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.secondary,
-                          foregroundColor: AppColors.black,
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
+              child: Consumer<UserProvider>(
+                builder: (context, userProvider, _) {
+                  final user = userProvider.user;
+                  
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        // Admin Label
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Admin',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
                         ),
-                        child: const Text(
-                          'Log out',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                        const SizedBox(height: 30),
+
+                        // Profile Avatar
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.divider,
+                          ),
+                          child: user?.profilePicture != null
+                              ? ClipOval(
+                                  child: Image.network(
+                                    user!.profilePicture!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const Icon(
+                                        Icons.person,
+                                        color: AppColors.white,
+                                        size: 60,
+                                      );
+                                    },
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.person,
+                                  color: AppColors.white,
+                                  size: 60,
+                                ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Admin Name
+                        Text(
+                          user?.fullName ?? 'Loading...',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 5),
+                        Text(
+                          user?.role ?? 'Admin',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+
+                        // Profile Section
+                        _buildSectionLabel('Profile'),
+                        const SizedBox(height: 10),
+                        _buildMenuItem(
+                          context: context,
+                          title: 'Account & Security',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AccountSecurityScreen(),
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 30),
+
+                        // Settings Section
+                        _buildSectionLabel('Settings'),
+                        const SizedBox(height: 10),
+                        _buildMenuItem(
+                          context: context,
+                          title: 'Notification Settings',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const NotificationSettingsScreen(),
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 30),
+
+                        // Details Section
+                        _buildSectionLabel('Details'),
+                        const SizedBox(height: 10),
+                        _buildMenuItem(
+                          context: context,
+                          title: 'About us',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AboutUsScreen(),
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        // Logout Button
+                        SizedBox(
+                          width: 180,
+                          height: 45,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              _showLogoutDialog(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.secondary,
+                              foregroundColor: AppColors.black,
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                            ),
+                            child: const Text(
+                              'Log out',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                      ],
                     ),
-                    const SizedBox(height: 40),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ],
@@ -310,26 +346,29 @@ class AdminProfileScreen extends StatelessWidget {
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Log out'),
           content: const Text('Are you sure you want to log out?'),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
               },
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Navigate to login screen and clear stack
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  (route) => false,
-                );
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await context.read<AuthProvider>().logout();
+                if (context.mounted) {
+                  // Navigate to login screen and clear stack
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
               },
               child: const Text(
                 'Log out',

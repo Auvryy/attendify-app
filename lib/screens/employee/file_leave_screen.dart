@@ -1,7 +1,10 @@
 // lib/screens/employee/file_leave_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/leave_provider.dart';
 import 'request_submitted_screen.dart';
 
 class FileLeaveScreen extends StatefulWidget {
@@ -16,6 +19,7 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
   final TextEditingController _reasonController = TextEditingController();
   String? _selectedImagePath;
   bool _isLoading = false;
+  DateTime? _selectedDate;
 
   @override
   void dispose() {
@@ -47,22 +51,21 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
 
     if (picked != null) {
       setState(() {
-        _dateController.text =
-            '${picked.month.toString().padLeft(2, '0')}/${picked.day.toString().padLeft(2, '0')}/${picked.year}';
+        _selectedDate = picked;
+        _dateController.text = DateFormat('MM/dd/yyyy').format(picked);
       });
     }
   }
 
   void _pickImage() {
-    // TODO: Implement image picker
-    // For now, just show a placeholder
+    // TODO: Implement image picker for attachment
     setState(() {
       _selectedImagePath = 'selected';
     });
   }
 
-  void _submitLeaveRequest() {
-    if (_dateController.text.isEmpty) {
+  Future<void> _submitLeaveRequest() async {
+    if (_selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select a date for your leave'),
@@ -82,24 +85,34 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
-    // Simulate API call
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        _isLoading = false;
-      });
+    final leaveProvider = context.read<LeaveProvider>();
+    final success = await leaveProvider.fileLeaveRequest(
+      leaveDate: DateFormat('yyyy-MM-dd').format(_selectedDate!),
+      reason: _reasonController.text.trim(),
+      attachmentUrl: _selectedImagePath,
+    );
 
-      // Navigate to success screen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const RequestSubmittedScreen(),
-        ),
-      );
-    });
+    if (mounted) {
+      setState(() => _isLoading = false);
+      
+      if (success) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const RequestSubmittedScreen(),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(leaveProvider.errorMessage ?? 'Failed to submit leave request'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   @override

@@ -1,22 +1,37 @@
 // lib/screens/admin/admin_leave_request_detail_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/admin_provider.dart';
 
-class AdminLeaveRequestDetailScreen extends StatelessWidget {
+class AdminLeaveRequestDetailScreen extends StatefulWidget {
   final String employeeName;
   final String leaveDate;
   final String reason;
+  final String requestId;
+  final String status;
 
   const AdminLeaveRequestDetailScreen({
     super.key,
     required this.employeeName,
     required this.leaveDate,
     required this.reason,
+    required this.requestId,
+    required this.status,
   });
 
   @override
+  State<AdminLeaveRequestDetailScreen> createState() => _AdminLeaveRequestDetailScreenState();
+}
+
+class _AdminLeaveRequestDetailScreenState extends State<AdminLeaveRequestDetailScreen> {
+  bool _isProcessing = false;
+
+  @override
   Widget build(BuildContext context) {
+    final isPending = widget.status == 'pending';
+    
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -32,14 +47,21 @@ class AdminLeaveRequestDetailScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Employee Name
-                    Text(
-                      employeeName,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
+                    // Employee Name with Status
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.employeeName,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        _buildStatusBadge(widget.status),
+                      ],
                     ),
 
                     const SizedBox(height: 24),
@@ -68,7 +90,7 @@ class AdminLeaveRequestDetailScreen extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        leaveDate,
+                        widget.leaveDate,
                         style: const TextStyle(
                           fontSize: 15,
                           color: AppColors.textPrimary,
@@ -99,7 +121,7 @@ class AdminLeaveRequestDetailScreen extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        'We will have a family gathering in Tagaytay. It is a one-day event and I will be back the next day.',
+                        widget.reason,
                         style: const TextStyle(
                           fontSize: 14,
                           color: AppColors.textPrimary,
@@ -153,70 +175,116 @@ class AdminLeaveRequestDetailScreen extends StatelessWidget {
 
                     const SizedBox(height: 40),
 
-                    // Action Buttons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Decline Button
-                        SizedBox(
-                          width: 130,
-                          height: 45,
-                          child: OutlinedButton(
-                            onPressed: () {
-                              _handleDecline(context);
-                            },
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(
-                                color: AppColors.accent,
-                                width: 1.5,
+                    // Action Buttons (only show if pending)
+                    if (widget.status == 'pending')
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Decline Button
+                          SizedBox(
+                            width: 130,
+                            height: 45,
+                            child: OutlinedButton(
+                              onPressed: _isProcessing ? null : () => _handleDecline(context),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: AppColors.accent,
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(22),
+                                ),
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(22),
-                              ),
-                            ),
-                            child: const Text(
-                              'Decline',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.accent,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-                        // Accept Button
-                        SizedBox(
-                          width: 130,
-                          height: 45,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              _handleAccept(context);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.secondary,
-                              foregroundColor: AppColors.white,
-                              elevation: 2,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(22),
-                              ),
-                            ),
-                            child: const Text(
-                              'Accept',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                              child: const Text(
+                                'Decline',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.accent,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(width: 20),
+                          // Accept Button
+                          SizedBox(
+                            width: 130,
+                            height: 45,
+                            child: ElevatedButton(
+                              onPressed: _isProcessing ? null : () => _handleAccept(context),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.secondary,
+                                foregroundColor: AppColors.white,
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(22),
+                                ),
+                              ),
+                              child: _isProcessing 
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.white,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Accept',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color backgroundColor;
+    Color textColor;
+    String text;
+
+    switch (status.toLowerCase()) {
+      case 'approved':
+        backgroundColor = Colors.green.shade100;
+        textColor = Colors.green.shade800;
+        text = 'Approved';
+        break;
+      case 'denied':
+      case 'declined':
+        backgroundColor = Colors.red.shade100;
+        textColor = Colors.red.shade800;
+        text = 'Denied';
+        break;
+      default:
+        backgroundColor = Colors.orange.shade100;
+        textColor = Colors.orange.shade800;
+        text = 'Pending';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: textColor,
         ),
       ),
     );
@@ -269,25 +337,43 @@ class AdminLeaveRequestDetailScreen extends StatelessWidget {
   void _handleDecline(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Decline Request'),
           content: const Text('Are you sure you want to decline this leave request?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Leave request declined'),
-                    backgroundColor: AppColors.error,
-                  ),
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                setState(() => _isProcessing = true);
+                
+                final success = await context.read<AdminProvider>().reviewLeaveRequest(
+                  id: widget.requestId,
+                  action: 'deny',
                 );
+                
+                setState(() => _isProcessing = false);
+                
+                if (success && mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Leave request declined'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                } else if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(context.read<AdminProvider>().errorMessage ?? 'Failed to decline request'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
               },
               child: const Text(
                 'Decline',
@@ -303,25 +389,43 @@ class AdminLeaveRequestDetailScreen extends StatelessWidget {
   void _handleAccept(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Accept Request'),
           content: const Text('Are you sure you want to accept this leave request?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Leave request accepted'),
-                    backgroundColor: AppColors.success,
-                  ),
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                setState(() => _isProcessing = true);
+                
+                final success = await context.read<AdminProvider>().reviewLeaveRequest(
+                  id: widget.requestId,
+                  action: 'approve',
                 );
+                
+                setState(() => _isProcessing = false);
+                
+                if (success && mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Leave request accepted'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                } else if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(context.read<AdminProvider>().errorMessage ?? 'Failed to accept request'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
               },
               child: const Text(
                 'Accept',

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/logo_widget.dart';
+import '../../providers/auth_provider.dart';
 import '../screens/signup_screen.dart';
 import 'admin/admin_main_layout.dart';
+import 'employee/employee_main_layout.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,17 +30,39 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      // Navigate to Admin page for debugging
-      Future.delayed(const Duration(seconds: 1), () {
+      
+      final auth = context.read<AuthProvider>();
+      final success = await auth.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+      
+      if (mounted) {
         setState(() => _isLoading = false);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AdminMainLayout()),
-        );
-      });
+        
+        if (success) {
+          // Navigate based on role
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => auth.isAdmin 
+                ? const AdminMainLayout() 
+                : const EmployeeMainLayout(),
+            ),
+          );
+        } else {
+          // Show error
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(auth.errorMessage ?? 'Login failed'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
     }
   }
 

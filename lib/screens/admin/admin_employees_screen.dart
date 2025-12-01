@@ -1,7 +1,10 @@
 // lib/screens/admin/admin_employees_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/admin_provider.dart';
+import '../../models/user_model.dart';
 import 'admin_employee_detail_screen.dart';
 
 class AdminEmployeesScreen extends StatefulWidget {
@@ -13,22 +16,15 @@ class AdminEmployeesScreen extends StatefulWidget {
 
 class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
   final TextEditingController _searchController = TextEditingController();
-  
-  final List<Map<String, String>> _employees = [
-    {'name': 'Amador, Roberto E.', 'role': 'Employee'},
-    {'name': 'Banaag, Julius J.', 'role': 'Employee'},
-    {'name': 'Cabigan, Jairo R.', 'role': 'Employee'},
-    {'name': 'Lorenzo, Juliane Z.', 'role': 'Employee'},
-    {'name': 'Ramilo, Allianah D.', 'role': 'Employee'},
-    {'name': 'Viterbo, Ecer S.', 'role': 'Employee'},
-  ];
-
-  List<Map<String, String>> _filteredEmployees = [];
+  List<UserModel> _filteredEmployees = [];
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _filteredEmployees = _employees;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AdminProvider>().fetchEmployees();
+    });
   }
 
   @override
@@ -38,13 +34,15 @@ class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
   }
 
   void _filterEmployees(String query) {
+    final provider = context.read<AdminProvider>();
     setState(() {
+      _searchQuery = query;
       if (query.isEmpty) {
-        _filteredEmployees = _employees;
+        _filteredEmployees = provider.employees;
       } else {
-        _filteredEmployees = _employees
+        _filteredEmployees = provider.employees
             .where((emp) =>
-                emp['name']!.toLowerCase().contains(query.toLowerCase()))
+                emp.fullName.toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
     });
@@ -62,62 +60,86 @@ class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
 
             // Content
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Title with search
-                    Row(
+              child: Consumer<AdminProvider>(
+                builder: (context, provider, _) {
+                  if (provider.isLoading && provider.employees.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  
+                  final employees = _searchQuery.isEmpty 
+                      ? provider.employees 
+                      : _filteredEmployees;
+                  
+                  if (employees.isEmpty && _searchQuery.isEmpty && !provider.isLoading) {
+                    return const Center(
+                      child: Text(
+                        'No employees found',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    );
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Employees',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
+                        // Title with search
+                        Row(
+                          children: [
+                            const Text(
+                              'Employees',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              onPressed: () {
+                                _showSearchDialog();
+                              },
+                              icon: const Icon(
+                                Icons.search,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
-                        const Spacer(),
-                        IconButton(
-                          onPressed: () {
-                            _showSearchDialog();
-                          },
-                          icon: const Icon(
-                            Icons.search,
-                            color: AppColors.textSecondary,
+                        const SizedBox(height: 16),
+
+                        // Employee List
+                        Expanded(
+                          child: RefreshIndicator(
+                            onRefresh: () => provider.fetchEmployees(),
+                            child: ListView.separated(
+                              itemCount: employees.length,
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(height: 12),
+                              itemBuilder: (context, index) {
+                                final employee = employees[index];
+                                return _buildEmployeeItem(
+                                  name: employee.fullName,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => AdminEmployeeDetailScreen(
+                                          employeeName: employee.fullName,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-
-                    // Employee List
-                    Expanded(
-                      child: ListView.separated(
-                        itemCount: _filteredEmployees.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final employee = _filteredEmployees[index];
-                          return _buildEmployeeItem(
-                            name: employee['name']!,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => AdminEmployeeDetailScreen(
-                                    employeeName: employee['name']!,
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ],
