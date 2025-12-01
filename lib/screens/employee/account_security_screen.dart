@@ -2,6 +2,9 @@
 
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
+import 'change_personal_info_screen.dart';
+import 'change_phone_number_screen.dart';
+import 'change_password_screen.dart';
 
 class AccountSecurityScreen extends StatelessWidget {
   const AccountSecurityScreen({super.key});
@@ -33,7 +36,12 @@ class AccountSecurityScreen extends StatelessWidget {
                       label: 'Surname, First Name Middle Name',
                       value: 'Surname, First Name Middle Name',
                       onEdit: () {
-                        // Handle edit name
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ChangePersonalInfoScreen(),
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(height: 12),
@@ -42,7 +50,12 @@ class AccountSecurityScreen extends StatelessWidget {
                       label: 'Mobile Number',
                       value: '09*********',
                       onEdit: () {
-                        // Handle edit mobile
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ChangePhoneNumberScreen(),
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(height: 12),
@@ -51,7 +64,7 @@ class AccountSecurityScreen extends StatelessWidget {
                       label: 'Email',
                       value: 'example@gmail.com',
                       onEdit: () {
-                        // Handle edit email
+                        // Handle edit email - can reuse phone number flow
                       },
                     ),
                     const SizedBox(height: 12),
@@ -71,7 +84,12 @@ class AccountSecurityScreen extends StatelessWidget {
                     _buildSecurityMenuItem(
                       title: 'Change Password',
                       onTap: () {
-                        // Navigate to change password
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ChangePasswordScreen(),
+                          ),
+                        );
                       },
                     ),
                   ],

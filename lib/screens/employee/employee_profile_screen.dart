@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import 'account_security_screen.dart';
+import 'notification_settings_screen.dart';
+import 'about_us_screen.dart';
 
 class EmployeeProfileScreen extends StatelessWidget {
   const EmployeeProfileScreen({super.key});
@@ -84,7 +86,14 @@ class EmployeeProfileScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     _buildMenuItem(
                       title: 'Notification Settings',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NotificationSettingsScreen(),
+                          ),
+                        );
+                      },
                     ),
 
                     const SizedBox(height: 30),
@@ -92,7 +101,17 @@ class EmployeeProfileScreen extends StatelessWidget {
                     // Details Section
                     _buildSectionLabel('Details'),
                     const SizedBox(height: 10),
-                    _buildMenuItem(title: 'About us', onTap: () {}),
+                    _buildMenuItem(
+                      title: 'About us',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AboutUsScreen(),
+                          ),
+                        );
+                      },
+                    ),
 
                     const SizedBox(height: 40),
 
