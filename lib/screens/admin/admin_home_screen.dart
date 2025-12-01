@@ -40,8 +40,8 @@ class AdminHomeScreen extends StatelessWidget {
 
                     const SizedBox(height: 20),
 
-                    // QR Code Card
-                    _buildQRCodeCard(),
+                    // QR Code Card - Centered
+                    Center(child: _buildQRCodeCard()),
 
                     const SizedBox(height: 30),
 
