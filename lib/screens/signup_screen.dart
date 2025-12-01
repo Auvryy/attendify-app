@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
-import 'login_screen.dart'; // import login
+import '../../providers/auth_provider.dart';
+import '../../providers/user_provider.dart';
+import '../../models/barangay_model.dart';
+import 'login_screen.dart';
 import 'employee/employee_main_layout.dart';
+import 'admin/admin_main_layout.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -15,53 +20,193 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final _fullNameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _mobileController = TextEditingController();
-  final _roleController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _emailController = TextEditingController();
+  final _otpController = TextEditingController();
 
-  String? _selectedBarangay;
+  String? _selectedBarangayId;  // Changed to String for UUID
+  String? _selectedBarangayName;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  
+  // Registration flow state
+  int _currentStep = 0; // 0: enter email, 1: verify OTP, 2: complete registration
+  String? _devOtp; // For development mode
 
-  final _barangays = const ['Barangay Masico', 'Barangay Pansol', 'Barangay San Miguel'];
+  List<BarangayModel> _barangays = [];
+  bool _barangaysLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Use addPostFrameCallback to avoid calling provider during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchBarangays();
+    });
+  }
+
+  Future<void> _fetchBarangays() async {
+    if (_barangaysLoaded) return;
+    final userProvider = context.read<UserProvider>();
+    await userProvider.fetchBarangays();
+    if (mounted) {
+      setState(() {
+        _barangays = userProvider.barangays;
+        _barangaysLoaded = true;
+      });
+    }
+  }
 
   @override
   void dispose() {
-    _fullNameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _mobileController.dispose();
-    _roleController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _emailController.dispose();
+    _otpController.dispose();
     super.dispose();
   }
 
-void _handleSignUp() {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _sendOtp() async {
+    if (_emailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter your email'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
 
-  setState(() => _isLoading = true);
-
-  // TODO: implement sign up logic with API call
-
-  // For debugging: Navigate to Employee Main Layout after 2 seconds
-  Future.delayed(const Duration(seconds: 2), () {
+    setState(() => _isLoading = true);
+    
+    final auth = context.read<AuthProvider>();
+    final success = await auth.sendRegistrationOtp(_emailController.text.trim());
+    
     if (mounted) {
       setState(() => _isLoading = false);
       
-      // Navigate to Employee Main Layout (with bottom navigation)
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const EmployeeMainLayout(),
+      if (success) {
+        setState(() => _currentStep = 1);
+        // Check for dev OTP
+        if (auth.errorMessage != null && auth.errorMessage!.contains('OTP:')) {
+          _devOtp = auth.errorMessage!.split('OTP: ').last;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Dev mode - OTP: $_devOtp'),
+              backgroundColor: AppColors.success,
+              duration: const Duration(seconds: 10),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('OTP sent to your email'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(auth.errorMessage ?? 'Failed to send OTP'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _verifyOtp() async {
+    if (_otpController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter the OTP'),
+          backgroundColor: AppColors.error,
         ),
       );
+      return;
     }
-  });
-}
+
+    setState(() => _isLoading = true);
+    
+    final auth = context.read<AuthProvider>();
+    final success = await auth.verifyRegistrationOtp(_otpController.text.trim());
+    
+    if (mounted) {
+      setState(() => _isLoading = false);
+      
+      if (success) {
+        setState(() => _currentStep = 2);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Email verified! Complete your registration.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(auth.errorMessage ?? 'Invalid OTP'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleSignUp() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedBarangayId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select your barangay'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final auth = context.read<AuthProvider>();
+    final success = await auth.completeRegistration(
+      password: _passwordController.text,
+      firstName: _firstNameController.text.trim(),
+      lastName: _lastNameController.text.trim(),
+      phone: _mobileController.text.trim(),
+      barangayId: _selectedBarangayId!,
+    );
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+      
+      if (success) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => auth.isAdmin 
+              ? const AdminMainLayout() 
+              : const EmployeeMainLayout(),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(auth.errorMessage ?? 'Registration failed'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -162,11 +307,21 @@ void _handleSignUp() {
                       const SizedBox(height: 8),
 
                       CustomTextField(
-                        label: 'Surname, First Name Middle Name',
-                        controller: _fullNameController,
+                        label: 'First Name',
+                        controller: _firstNameController,
                         prefixIcon: Icons.person_outline,
                         validator: (v) => v == null || v.isEmpty
-                            ? 'Please enter your full name'
+                            ? 'Please enter your first name'
+                            : null,
+                      ),
+                      const SizedBox(height: 12),
+
+                      CustomTextField(
+                        label: 'Last Name',
+                        controller: _lastNameController,
+                        prefixIcon: Icons.person_outline,
+                        validator: (v) => v == null || v.isEmpty
+                            ? 'Please enter your last name'
                             : null,
                       ),
                       const SizedBox(height: 12),
@@ -193,12 +348,12 @@ void _handleSignUp() {
                       ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        value: _selectedBarangay,
+                        value: _selectedBarangayId,
                         items: _barangays
                             .map(
                               (b) => DropdownMenuItem<String>(
-                                value: b,
-                                child: Text(b),
+                                value: b.id,
+                                child: Text(b.name),
                               ),
                             )
                             .toList(),
@@ -232,21 +387,11 @@ void _handleSignUp() {
                         ),
                         onChanged: (value) {
                           setState(() {
-                            _selectedBarangay = value;
+                            _selectedBarangayId = value;
                           });
                         },
                         validator: (value) => value == null
                             ? 'Please select your barangay'
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-
-                      CustomTextField(
-                        label: 'Role',
-                        controller: _roleController,
-                        prefixIcon: Icons.badge_outlined,
-                        validator: (v) => v == null || v.isEmpty
-                            ? 'Please enter your role'
                             : null,
                       ),
 
@@ -329,17 +474,59 @@ void _handleSignUp() {
                             ? 'Please enter your email'
                             : null,
                       ),
+                      
+                      // OTP Section - shown after step 0
+                      if (_currentStep >= 1) ...[
+                        const SizedBox(height: 12),
+                        CustomTextField(
+                          label: 'Enter OTP',
+                          controller: _otpController,
+                          prefixIcon: Icons.lock_clock_outlined,
+                          keyboardType: TextInputType.number,
+                          validator: (v) => _currentStep >= 1 && (v == null || v.isEmpty)
+                              ? 'Please enter the OTP'
+                              : null,
+                        ),
+                        if (_devOtp != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              'Dev OTP: $_devOtp',
+                              style: const TextStyle(
+                                color: AppColors.success,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                      ],
 
                       const SizedBox(height: 32),
 
-                      // Full-width button like login
-                      CustomButton(
-                        text: 'Create account',
-                        onPressed: _handleSignUp,
-                        isLoading: _isLoading,
-                        backgroundColor: AppColors.buttonPrimary,
-                        textColor: AppColors.black,
-                      ),
+                      // Step-based buttons
+                      if (_currentStep == 0)
+                        CustomButton(
+                          text: 'Send OTP',
+                          onPressed: _sendOtp,
+                          isLoading: _isLoading,
+                          backgroundColor: AppColors.buttonPrimary,
+                          textColor: AppColors.black,
+                        )
+                      else if (_currentStep == 1)
+                        CustomButton(
+                          text: 'Verify OTP',
+                          onPressed: _verifyOtp,
+                          isLoading: _isLoading,
+                          backgroundColor: AppColors.buttonPrimary,
+                          textColor: AppColors.black,
+                        )
+                      else
+                        CustomButton(
+                          text: 'Create account',
+                          onPressed: _handleSignUp,
+                          isLoading: _isLoading,
+                          backgroundColor: AppColors.buttonPrimary,
+                          textColor: AppColors.black,
+                        ),
                       const SizedBox(height: 16),
 
                       // Bottom "Already have an account? Log in"

@@ -3,7 +3,9 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/attendance_provider.dart';
 
 class AdminQRScannerScreen extends StatefulWidget {
   const AdminQRScannerScreen({super.key});
@@ -16,6 +18,7 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
   bool _isTorchOn = false;
   bool _hasError = false;
   String _errorMessage = '';
+  bool _isProcessing = false;
 
   // Check if camera is supported
   bool get _isCameraSupported {
@@ -322,101 +325,175 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
   }
 
   void _showDemoScanResult() {
-    // Show success dialog with demo data
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_circle,
-                  color: AppColors.success,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text('QR Code Detected'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Employee Information:',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Amador, Roberto E.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Employee ID: EMP-2025-001',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Scan Again'),
+    // Simulate QR code scan with demo data
+    _processQRCode('demo-qr-code-employee-001');
+  }
+
+  Future<void> _processQRCode(String qrCode) async {
+    if (_isProcessing) return;
+    
+    setState(() => _isProcessing = true);
+    
+    final provider = context.read<AttendanceProvider>();
+    final result = await provider.scanAttendance(qrCode);
+    
+    setState(() => _isProcessing = false);
+    
+    if (!mounted) return;
+    
+    if (result != null) {
+      // Show success dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Attendance recorded successfully!'),
-                    backgroundColor: AppColors.success,
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    shape: BoxShape.circle,
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.secondary,
-                foregroundColor: AppColors.accent,
-              ),
-              child: const Text('Confirm Attendance'),
+                  child: const Icon(
+                    Icons.check_circle,
+                    color: AppColors.success,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Attendance Recorded',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                ),
+              ],
             ),
-          ],
-        );
-      },
-    );
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Attendance has been successfully recorded.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.access_time,
+                        color: AppColors.secondary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Time: ${TimeOfDay.now().format(context)}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Scan Another'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.secondary,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Done'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      // Show error dialog
+      showDialog(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.error_outline,
+                    color: AppColors.error,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Scan Failed',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              provider.errorMessage ?? 'Failed to record attendance. Please try again.',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Close'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.secondary,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Try Again'),
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 }

@@ -1,7 +1,9 @@
 // lib/screens/employee/employee_profile_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/auth_provider.dart';
 import 'account_security_screen.dart';
 import 'notification_settings_screen.dart';
 import 'about_us_screen.dart';
@@ -11,6 +13,9 @@ class EmployeeProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final user = auth.user;
+    
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -35,38 +40,59 @@ class EmployeeProfileScreen extends StatelessWidget {
                         shape: BoxShape.circle,
                         color: AppColors.divider,
                       ),
-                      child: const Icon(
-                        Icons.person,
-                        color: AppColors.white,
-                        size: 60,
-                      ),
+                      child: user?.profilePicture != null
+                        ? ClipOval(
+                            child: Image.network(
+                              user!.profilePicture!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.person,
+                                color: AppColors.white,
+                                size: 60,
+                              ),
+                            ),
+                          )
+                        : const Icon(
+                            Icons.person,
+                            color: AppColors.white,
+                            size: 60,
+                          ),
                     ),
                     const SizedBox(height: 20),
 
                     // Employee Name
-                    const Text(
-                      'Full Name',
-                      style: TextStyle(
+                    Text(
+                      user?.fullName ?? 'Full Name',
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 5),
-                    const Text(
-                      'Role',
-                      style: TextStyle(
+                    Text(
+                      user?.role ?? 'Role',
+                      style: const TextStyle(
                         fontSize: 14,
                         color: AppColors.textSecondary,
                       ),
                     ),
+                    if (user?.barangayName != null) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        user!.barangayName!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 40),
 
                     // Profile Section
                     _buildSectionLabel('Profile'),
                     const SizedBox(height: 10),
 
-                    // In employee_profile_screen.dart, update the Account & Security menu item:
                     _buildMenuItem(
                       title: 'Account & Security',
                       onTap: () {
@@ -121,7 +147,6 @@ class EmployeeProfileScreen extends StatelessWidget {
                       height: 45,
                       child: ElevatedButton(
                         onPressed: () {
-                          // Handle logout
                           _showLogoutDialog(context);
                         },
                         style: ElevatedButton.styleFrom(
@@ -275,25 +300,21 @@ class EmployeeProfileScreen extends StatelessWidget {
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Log out'),
           content: const Text('Are you sure you want to log out?'),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
               },
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Navigate to login screen
-                // Navigator.pushReplacement(
-                //   context,
-                //   MaterialPageRoute(builder: (context) => const LoginScreen()),
-                // );
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await context.read<AuthProvider>().logout();
               },
               child: const Text(
                 'Log out',

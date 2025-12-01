@@ -1,10 +1,27 @@
 // lib/screens/employee/attendance_history_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/attendance_provider.dart';
+import '../../models/attendance_model.dart';
 
-class AttendanceHistoryScreen extends StatelessWidget {
+class AttendanceHistoryScreen extends StatefulWidget {
   const AttendanceHistoryScreen({super.key});
+
+  @override
+  State<AttendanceHistoryScreen> createState() => _AttendanceHistoryScreenState();
+}
+
+class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AttendanceProvider>().fetchAttendanceHistory(refresh: true);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,81 +35,47 @@ class AttendanceHistoryScreen extends StatelessWidget {
 
             // Attendance List
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // This Week Section
-                    const Text(
-                      'This Week',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
+              child: Consumer<AttendanceProvider>(
+                builder: (context, provider, _) {
+                  if (provider.isLoading && provider.attendanceHistory.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  
+                  if (provider.attendanceHistory.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'No attendance records found',
+                        style: TextStyle(color: AppColors.textSecondary),
                       ),
-                    ),
-                    const SizedBox(height: 12),
+                    );
+                  }
 
-                    // This week attendance records
-                    _buildAttendanceCard(
-                      date: 'September 29, 2025',
-                      timeIn: null,
-                      timeOut: null,
-                      status: AttendanceStatus.onLeave,
+                  return RefreshIndicator(
+                    onRefresh: () => provider.fetchAttendanceHistory(refresh: true),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                      itemCount: provider.attendanceHistory.length + (provider.hasMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == provider.attendanceHistory.length) {
+                          // Load more
+                          provider.fetchAttendanceHistory();
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        }
+                        
+                        final attendance = provider.attendanceHistory[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildAttendanceCard(attendance),
+                        );
+                      },
                     ),
-                    const SizedBox(height: 12),
-                    _buildAttendanceCard(
-                      date: 'September 28, 2025',
-                      timeIn: '8:30 AM',
-                      timeOut: '5:01 PM',
-                      status: AttendanceStatus.late,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildAttendanceCard(
-                      date: 'September 27, 2025',
-                      timeIn: '8:00 AM',
-                      timeOut: '5:05 PM',
-                      status: AttendanceStatus.onTime,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildAttendanceCard(
-                      date: 'September 26, 2025',
-                      timeIn: '8:00 AM',
-                      timeOut: '5:05 PM',
-                      status: AttendanceStatus.onTime,
-                    ),
-
-                    const SizedBox(height: 25),
-
-                    // Previous Weeks Section
-                    const Text(
-                      'Previous Weeks',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    _buildAttendanceCard(
-                      date: 'September 15, 2025',
-                      timeIn: null,
-                      timeOut: null,
-                      status: AttendanceStatus.onLeave,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildAttendanceCard(
-                      date: 'September 10, 2025',
-                      timeIn: '8:00 AM',
-                      timeOut: '5:00 PM',
-                      status: AttendanceStatus.onTime,
-                    ),
-
-                    const SizedBox(height: 20),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ],
@@ -176,12 +159,9 @@ class AttendanceHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAttendanceCard({
-    required String date,
-    String? timeIn,
-    String? timeOut,
-    required AttendanceStatus status,
-  }) {
+  Widget _buildAttendanceCard(AttendanceModel attendance) {
+    final dateFormat = DateFormat('MMMM d, yyyy');
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -203,7 +183,7 @@ class AttendanceHistoryScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  date,
+                  dateFormat.format(attendance.date),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -216,13 +196,13 @@ class AttendanceHistoryScreen extends StatelessWidget {
                     // Time In
                     _buildTimeColumn(
                       label: 'Time in',
-                      value: timeIn ?? '--',
+                      value: attendance.formattedTimeIn,
                     ),
                     const SizedBox(width: 24),
                     // Time Out
                     _buildTimeColumn(
                       label: 'Time out',
-                      value: timeOut ?? '--',
+                      value: attendance.formattedTimeOut,
                     ),
                   ],
                 ),
@@ -231,7 +211,7 @@ class AttendanceHistoryScreen extends StatelessWidget {
           ),
 
           // Status Badge
-          _buildStatusBadge(status),
+          _buildStatusBadge(attendance.status),
         ],
       ),
     );
@@ -280,8 +260,13 @@ class AttendanceHistoryScreen extends StatelessWidget {
         textColor = AppColors.white;
         text = 'Late';
         break;
-      case AttendanceStatus.onLeave:
+      case AttendanceStatus.absent:
         backgroundColor = AppColors.textSecondary;
+        textColor = AppColors.white;
+        text = 'Absent';
+        break;
+      case AttendanceStatus.onLeave:
+        backgroundColor = AppColors.secondary;
         textColor = AppColors.white;
         text = 'On Leave';
         break;
@@ -303,10 +288,4 @@ class AttendanceHistoryScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-enum AttendanceStatus {
-  onTime,
-  late,
-  onLeave,
 }

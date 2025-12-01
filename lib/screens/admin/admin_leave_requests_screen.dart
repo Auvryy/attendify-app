@@ -1,11 +1,27 @@
 // lib/screens/admin/admin_leave_requests_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/admin_provider.dart';
+import '../../models/leave_request_model.dart';
 import 'admin_leave_request_detail_screen.dart';
 
-class AdminLeaveRequestsScreen extends StatelessWidget {
+class AdminLeaveRequestsScreen extends StatefulWidget {
   const AdminLeaveRequestsScreen({super.key});
+
+  @override
+  State<AdminLeaveRequestsScreen> createState() => _AdminLeaveRequestsScreenState();
+}
+
+class _AdminLeaveRequestsScreenState extends State<AdminLeaveRequestsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AdminProvider>().fetchLeaveRequests();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,60 +35,81 @@ class AdminLeaveRequestsScreen extends StatelessWidget {
 
             // Content
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Today Section
-                    const Text(
-                      'Today',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
+              child: Consumer<AdminProvider>(
+                builder: (context, provider, _) {
+                  if (provider.isLoading && provider.leaveRequests.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  
+                  final pendingRequests = provider.leaveRequests
+                      .where((r) => r.status == 'pending')
+                      .toList();
+                  final processedRequests = provider.leaveRequests
+                      .where((r) => r.status != 'pending')
+                      .toList();
+                  
+                  if (provider.leaveRequests.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'No leave requests found',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    );
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () => provider.fetchLeaveRequests(),
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (pendingRequests.isNotEmpty) ...[
+                            // Pending Section
+                            const Text(
+                              'Pending Requests',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ...pendingRequests.map((request) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _buildLeaveRequestCard(
+                                context: context,
+                                request: request,
+                              ),
+                            )),
+                            const SizedBox(height: 24),
+                          ],
+
+                          if (processedRequests.isNotEmpty) ...[
+                            // Previous History Section
+                            const Text(
+                              'Previous History',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ...processedRequests.map((request) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _buildLeaveRequestCard(
+                                context: context,
+                                request: request,
+                              ),
+                            )),
+                          ],
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-
-                    _buildLeaveRequestCard(
-                      context: context,
-                      name: 'Amador, Roberto E.',
-                      leaveDate: 'October 20, 2025',
-                      reason: 'We will have a family gathering in Tagaytay...',
-                      hasAttachment: true,
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Previous History Section
-                    const Text(
-                      'Previous History',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    _buildLeaveRequestCard(
-                      context: context,
-                      name: 'Ramilo, Allianah D.',
-                      leaveDate: 'September 4, 2025',
-                      reason: 'I am not feeling well...',
-                      hasAttachment: true,
-                    ),
-                    const SizedBox(height: 10),
-                    _buildLeaveRequestCard(
-                      context: context,
-                      name: 'Lorenzo, Juliane Z.',
-                      leaveDate: 'October 3, 2025',
-                      reason: 'We will have a family gathering in Tagaytay...',
-                      hasAttachment: false,
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ],
@@ -158,10 +195,7 @@ class AdminLeaveRequestsScreen extends StatelessWidget {
 
   Widget _buildLeaveRequestCard({
     required BuildContext context,
-    required String name,
-    required String leaveDate,
-    required String reason,
-    required bool hasAttachment,
+    required LeaveRequestModel request,
   }) {
     return InkWell(
       onTap: () {
@@ -169,9 +203,11 @@ class AdminLeaveRequestsScreen extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => AdminLeaveRequestDetailScreen(
-              employeeName: name,
-              leaveDate: leaveDate,
-              reason: reason,
+              employeeName: request.userName ?? 'Unknown Employee',
+              leaveDate: request.formattedLeaveDate,
+              reason: request.reason,
+              requestId: request.id,
+              status: request.status,
             ),
           ),
         );
@@ -196,17 +232,24 @@ class AdminLeaveRequestsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          request.userName ?? 'Unknown Employee',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      _buildStatusBadge(request.status),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Leave on $leaveDate',
+                    'Leave on ${request.formattedLeaveDate}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,
@@ -214,7 +257,7 @@ class AdminLeaveRequestsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Reason: $reason',
+                    'Reason: ${request.reason}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,
@@ -222,7 +265,7 @@ class AdminLeaveRequestsScreen extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (hasAttachment) ...[
+                  if (request.attachmentUrl != null) ...[
                     const SizedBox(height: 4),
                     Row(
                       children: [
@@ -252,6 +295,46 @@ class AdminLeaveRequestsScreen extends StatelessWidget {
               size: 22,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color backgroundColor;
+    Color textColor;
+    String text;
+
+    switch (status.toLowerCase()) {
+      case 'approved':
+        backgroundColor = Colors.green.shade100;
+        textColor = Colors.green.shade800;
+        text = 'Approved';
+        break;
+      case 'denied':
+      case 'declined':
+        backgroundColor = Colors.red.shade100;
+        textColor = Colors.red.shade800;
+        text = 'Denied';
+        break;
+      default:
+        backgroundColor = Colors.orange.shade100;
+        textColor = Colors.orange.shade800;
+        text = 'Pending';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: textColor,
         ),
       ),
     );
