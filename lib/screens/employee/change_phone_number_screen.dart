@@ -216,73 +216,38 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
 
   Widget _buildSubmitButton() {
     return Center(
-      child: Column(
-        children: [
-          // Avatar
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.accent,
-                width: 2,
-              ),
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/images/profile-avatar.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: AppColors.accent,
-                    child: const Icon(
-                      Icons.person,
-                      color: AppColors.white,
-                      size: 28,
-                    ),
-                  );
-                },
-              ),
+      child: SizedBox(
+        width: 140,
+        height: 45,
+        child: ElevatedButton(
+          onPressed: _isLoading ? null : _handleChange,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.secondary,
+            foregroundColor: AppColors.white,
+            disabledBackgroundColor: AppColors.buttonDisabled,
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
             ),
           ),
-          const SizedBox(height: 12),
-
-          // Change Button
-          SizedBox(
-            width: 140,
-            height: 45,
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _handleChange,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.secondary,
-                foregroundColor: AppColors.white,
-                disabledBackgroundColor: AppColors.buttonDisabled,
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(AppColors.white),
+                  ),
+                )
+              : const Text(
+                  'Change',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(AppColors.white),
-                      ),
-                    )
-                  : const Text(
-                      'Change',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

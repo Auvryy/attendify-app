@@ -335,73 +335,38 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
 
   Widget _buildSubmitButton() {
     return Center(
-      child: Column(
-        children: [
-          // Small avatar icon
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.accent,
-                width: 2,
-              ),
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/images/profile-avatar.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: AppColors.accent,
-                    child: const Icon(
-                      Icons.person,
-                      color: AppColors.white,
-                      size: 20,
-                    ),
-                  );
-                },
-              ),
+      child: SizedBox(
+        width: 160,
+        height: 48,
+        child: ElevatedButton(
+          onPressed: _isLoading ? null : _submitLeaveRequest,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.secondary,
+            foregroundColor: AppColors.white,
+            disabledBackgroundColor: AppColors.buttonDisabled,
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
             ),
           ),
-          const SizedBox(height: 12),
-
-          // Submit Button
-          SizedBox(
-            width: 160,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _submitLeaveRequest,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.secondary,
-                foregroundColor: AppColors.white,
-                disabledBackgroundColor: AppColors.buttonDisabled,
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(AppColors.white),
+                  ),
+                )
+              : const Text(
+                  'File now',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(AppColors.white),
-                      ),
-                    )
-                  : const Text(
-                      'File now',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

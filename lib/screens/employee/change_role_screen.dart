@@ -1,47 +1,35 @@
-// lib/screens/employee/change_password_screen.dart
+// lib/screens/employee/change_role_screen.dart
 
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
-import 'verify_password_screen.dart';
 
-class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({super.key});
+class ChangeRoleScreen extends StatefulWidget {
+  const ChangeRoleScreen({super.key});
 
   @override
-  State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
+  State<ChangeRoleScreen> createState() => _ChangeRoleScreenState();
 }
 
-class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
-  final TextEditingController _currentPasswordController =
-      TextEditingController();
-  final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
+class _ChangeRoleScreenState extends State<ChangeRoleScreen> {
+  String? _selectedRole;
   bool _isLoading = false;
 
-  @override
-  void dispose() {
-    _currentPasswordController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
+  final List<String> _roles = [
+    'Employee',
+    'Manager',
+    'Supervisor',
+    'Team Lead',
+    'Department Head',
+  ];
 
-  void _handleChangePassword() {
-    if (_currentPasswordController.text.isEmpty) {
-      _showError('Please enter your current password');
-      return;
-    }
-    if (_newPasswordController.text.isEmpty) {
-      _showError('Please enter a new password');
-      return;
-    }
-    if (_confirmPasswordController.text.isEmpty) {
-      _showError('Please confirm your new password');
-      return;
-    }
-    if (_newPasswordController.text != _confirmPasswordController.text) {
-      _showError('Passwords do not match');
+  void _handleChange() {
+    if (_selectedRole == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a role'),
+          backgroundColor: AppColors.error,
+        ),
+      );
       return;
     }
 
@@ -55,23 +43,15 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         _isLoading = false;
       });
 
-      // Navigate to verification screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const VerifyPasswordScreen(),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Role updated successfully'),
+          backgroundColor: AppColors.success,
         ),
       );
-    });
-  }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.error,
-      ),
-    );
+      Navigator.pop(context);
+    });
   }
 
   @override
@@ -95,7 +75,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
                     // Title
                     const Text(
-                      'Change Password',
+                      'Role',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -104,51 +84,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Current Password
-                    _buildPasswordField(
-                      controller: _currentPasswordController,
-                      hintText: 'Enter Current Password',
-                    ),
-                    const SizedBox(height: 4),
+                    // Role Dropdown
+                    _buildRoleDropdown(),
 
-                    // Forgot Password Link
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        onPressed: () {
-                          // Handle forgot password
-                        },
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: const Text(
-                          'Forgot Password?',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // New Password
-                    _buildPasswordField(
-                      controller: _newPasswordController,
-                      hintText: 'Enter New Password',
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Confirm Password
-                    _buildPasswordField(
-                      controller: _confirmPasswordController,
-                      hintText: 'Confirm New Password',
-                    ),
-
-                    const SizedBox(height: 60),
+                    const SizedBox(height: 80),
 
                     // Submit Button
                     _buildSubmitButton(),
@@ -237,10 +176,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     );
   }
 
-  Widget _buildPasswordField({
-    required TextEditingController controller,
-    required String hintText,
-  }) {
+  Widget _buildRoleDropdown() {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
@@ -250,25 +186,44 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           width: 1,
         ),
       ),
-      child: TextField(
-        controller: controller,
-        obscureText: true,
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: const TextStyle(
+      child: DropdownButtonFormField<String>(
+        value: _selectedRole,
+        hint: const Text(
+          'Select role',
+          style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 15,
           ),
+        ),
+        decoration: const InputDecoration(
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
+          contentPadding: EdgeInsets.symmetric(
             horizontal: 16,
-            vertical: 14,
+            vertical: 4,
           ),
         ),
-        style: const TextStyle(
-          fontSize: 15,
-          color: AppColors.textPrimary,
+        icon: const Icon(
+          Icons.keyboard_arrow_down,
+          color: AppColors.textSecondary,
         ),
+        dropdownColor: AppColors.cardBackground,
+        items: _roles.map((String role) {
+          return DropdownMenuItem<String>(
+            value: role,
+            child: Text(
+              role,
+              style: const TextStyle(
+                fontSize: 15,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          );
+        }).toList(),
+        onChanged: (String? value) {
+          setState(() {
+            _selectedRole = value;
+          });
+        },
       ),
     );
   }
@@ -279,7 +234,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         width: 140,
         height: 45,
         child: ElevatedButton(
-          onPressed: _isLoading ? null : _handleChangePassword,
+          onPressed: _isLoading ? null : _handleChange,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.secondary,
             foregroundColor: AppColors.white,
