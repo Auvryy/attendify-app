@@ -135,21 +135,29 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.login}'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
-    
-    final body = jsonDecode(response.body);
-    // Backend returns {success, data: {access_token, refresh_token, user}}
-    if (response.statusCode == 200 && body['success'] == true) {
-      final data = body['data'];
-      if (data != null && data['access_token'] != null) {
-        await _saveTokens(data['access_token'], data['refresh_token']);
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.login}'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+      
+      print('Login response status: ${response.statusCode}');
+      print('Login response body: ${response.body}');
+      
+      final body = jsonDecode(response.body);
+      // Backend returns {success, data: {access_token, refresh_token, user}}
+      if (response.statusCode == 200 && body['success'] == true) {
+        final data = body['data'];
+        if (data != null && data['access_token'] != null) {
+          await _saveTokens(data['access_token'], data['refresh_token']);
+        }
       }
+      return body;
+    } catch (e) {
+      print('Login error: $e');
+      return {'success': false, 'message': 'Network error: $e'};
     }
-    return body;
   }
 
   Future<Map<String, dynamic>> forgotPassword(String email) async {

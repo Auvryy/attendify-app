@@ -78,7 +78,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _apiService.registerSendOtp(email);
       
-      // Backend returns {success, message, data: {otp}} (otp only in dev mode)
+      // Backend returns {success, message}
       if (response['success'] != true) {
         _errorMessage = response['message'] ?? 'Failed to send OTP';
         _status = AuthStatus.unauthenticated;
@@ -87,11 +87,6 @@ class AuthProvider with ChangeNotifier {
       }
       
       _pendingEmail = email;
-      // In development, OTP might be returned in data
-      final data = response['data'];
-      if (data != null && data['otp'] != null) {
-        _errorMessage = 'Development mode - OTP: ${data['otp']}';
-      }
       _status = AuthStatus.unauthenticated;
       notifyListeners();
       return true;
@@ -195,23 +190,31 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _apiService.login(email, password);
       
-      // Backend returns {success, data: {user, access_token, refresh_token}}
+      print('Auth provider received: $response');
+      
+      // Backend returns {success, message, data: {user, access_token, refresh_token}}
       if (response['success'] != true) {
-        _errorMessage = response['message'] ?? 'Login failed';
+        _errorMessage = response['message'] ?? 'Invalid email or password';
         _status = AuthStatus.unauthenticated;
         notifyListeners();
         return false;
       }
       
       final data = response['data'];
-      if (data != null && data['user'] != null) {
-        _user = UserModel.fromJson(data['user']);
+      if (data == null || data['user'] == null) {
+        _errorMessage = 'Login failed: No user data received';
+        _status = AuthStatus.unauthenticated;
+        notifyListeners();
+        return false;
       }
+      
+      _user = UserModel.fromJson(data['user']);
       _status = AuthStatus.authenticated;
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = 'Network error. Please try again.';
+      print('Login exception: $e');
+      _errorMessage = 'Network error. Please check your connection.';
       _status = AuthStatus.error;
       notifyListeners();
       return false;
