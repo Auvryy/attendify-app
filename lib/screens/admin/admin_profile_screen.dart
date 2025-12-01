@@ -1,13 +1,14 @@
-// lib/screens/employee/employee_profile_screen.dart
+// lib/screens/admin/admin_profile_screen.dart
 
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
-import 'account_security_screen.dart';
-import 'notification_settings_screen.dart';
-import 'about_us_screen.dart';
+import '../employee/account_security_screen.dart';
+import '../employee/notification_settings_screen.dart';
+import '../employee/about_us_screen.dart';
+import '../login_screen.dart';
 
-class EmployeeProfileScreen extends StatelessWidget {
-  const EmployeeProfileScreen({super.key});
+class AdminProfileScreen extends StatelessWidget {
+  const AdminProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +26,19 @@ class EmployeeProfileScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    const SizedBox(height: 20),
+                    // Admin Label
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Admin',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 30),
 
                     // Profile Avatar
                     Container(
@@ -43,7 +56,7 @@ class EmployeeProfileScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    // Employee Name
+                    // Admin Name
                     const Text(
                       'Full Name',
                       style: TextStyle(
@@ -65,9 +78,8 @@ class EmployeeProfileScreen extends StatelessWidget {
                     // Profile Section
                     _buildSectionLabel('Profile'),
                     const SizedBox(height: 10),
-
-                    // In employee_profile_screen.dart, update the Account & Security menu item:
                     _buildMenuItem(
+                      context: context,
                       title: 'Account & Security',
                       onTap: () {
                         Navigator.push(
@@ -85,6 +97,7 @@ class EmployeeProfileScreen extends StatelessWidget {
                     _buildSectionLabel('Settings'),
                     const SizedBox(height: 10),
                     _buildMenuItem(
+                      context: context,
                       title: 'Notification Settings',
                       onTap: () {
                         Navigator.push(
@@ -102,6 +115,7 @@ class EmployeeProfileScreen extends StatelessWidget {
                     _buildSectionLabel('Details'),
                     const SizedBox(height: 10),
                     _buildMenuItem(
+                      context: context,
                       title: 'About us',
                       onTap: () {
                         Navigator.push(
@@ -121,7 +135,6 @@ class EmployeeProfileScreen extends StatelessWidget {
                       height: 45,
                       child: ElevatedButton(
                         onPressed: () {
-                          // Handle logout
                           _showLogoutDialog(context);
                         },
                         style: ElevatedButton.styleFrom(
@@ -209,9 +222,27 @@ class EmployeeProfileScreen extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.accent,
+              border: Border.all(
+                color: AppColors.accent,
+                width: 2,
+              ),
             ),
-            child: const Icon(Icons.person, color: AppColors.white, size: 24),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/profile-avatar.png',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: AppColors.accent,
+                    child: const Icon(
+                      Icons.person,
+                      color: AppColors.white,
+                      size: 24,
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
         ],
       ),
@@ -233,7 +264,11 @@ class EmployeeProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuItem({required String title, required VoidCallback onTap}) {
+  Widget _buildMenuItem({
+    required BuildContext context,
+    required String title,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -289,11 +324,12 @@ class EmployeeProfileScreen extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // Navigate to login screen
-                // Navigator.pushReplacement(
-                //   context,
-                //   MaterialPageRoute(builder: (context) => const LoginScreen()),
-                // );
+                // Navigate to login screen and clear stack
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
+                );
               },
               child: const Text(
                 'Log out',

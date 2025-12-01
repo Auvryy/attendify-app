@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
 import 'screens/login_screen.dart';
+import 'screens/employee/attendance_history_screen.dart';
+import 'screens/employee/file_leave_screen.dart';
+import 'screens/employee/request_submitted_screen.dart';
 
 class AttendifyApp extends StatelessWidget {
   const AttendifyApp({super.key});
@@ -20,6 +23,11 @@ class AttendifyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const LoginScreen(),
+      routes: {
+        '/employee/attendance-history': (context) => const AttendanceHistoryScreen(),
+        '/employee/file-leave': (context) => const FileLeaveScreen(),
+        '/employee/request-submitted': (context) => const RequestSubmittedScreen(),
+      },
     );
   }
 }
