@@ -68,10 +68,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                             shape: BoxShape.circle,
                             color: AppColors.divider,
                           ),
-                          child: user?.profilePicture != null
+                          child: user?.profileImageUrl != null && user!.profileImageUrl!.isNotEmpty
                               ? ClipOval(
                                   child: Image.network(
-                                    user!.profilePicture!,
+                                    user.profileImageUrl!,
                                     fit: BoxFit.cover,
                                     errorBuilder: (context, error, stackTrace) {
                                       return const Icon(

@@ -211,7 +211,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
           ),
 
           // Status Badge
-          _buildStatusBadge(attendance.status),
+          _buildStatusBadge(attendance.statusEnum),
         ],
       ),
     );

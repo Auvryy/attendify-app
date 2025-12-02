@@ -1,8 +1,11 @@
 // lib/screens/employee/change_phone_number_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import 'verify_phone_number_screen.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/user_provider.dart';
+import 'phone_number_changed_screen.dart';
 
 class ChangePhoneNumberScreen extends StatefulWidget {
   const ChangePhoneNumberScreen({super.key});
@@ -17,12 +20,24 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Pre-fill with current phone
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthProvider>().user;
+      if (user != null) {
+        _phoneController.text = user.phone;
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _phoneController.dispose();
     super.dispose();
   }
 
-  void _handleChange() {
+  Future<void> _handleChange() async {
     if (_phoneController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -33,24 +48,48 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
       return;
     }
 
+    // Basic phone validation
+    final phone = _phoneController.text.trim();
+    if (phone.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid phone number'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
-    // Simulate API call
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        _isLoading = false;
-      });
+    final userProvider = context.read<UserProvider>();
+    final success = await userProvider.updatePhone(phone);
 
-      // Navigate to verification screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const VerifyPhoneNumberScreen(),
-        ),
-      );
+    setState(() {
+      _isLoading = false;
     });
+
+    if (success) {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const PhoneNumberChangedScreen(),
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(userProvider.errorMessage ?? 'Failed to update phone number'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   @override

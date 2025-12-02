@@ -1,8 +1,10 @@
 // lib/screens/employee/change_password_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import 'verify_password_screen.dart';
+import '../../providers/user_provider.dart';
+import 'password_changed_screen.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -18,6 +20,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   bool _isLoading = false;
+  bool _obscureCurrentPassword = true;
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
@@ -27,13 +32,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     super.dispose();
   }
 
-  void _handleChangePassword() {
+  Future<void> _handleChangePassword() async {
     if (_currentPasswordController.text.isEmpty) {
       _showError('Please enter your current password');
       return;
     }
     if (_newPasswordController.text.isEmpty) {
       _showError('Please enter a new password');
+      return;
+    }
+    if (_newPasswordController.text.length < 6) {
+      _showError('Password must be at least 6 characters');
       return;
     }
     if (_confirmPasswordController.text.isEmpty) {
@@ -49,20 +58,30 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       _isLoading = true;
     });
 
-    // Simulate API call
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        _isLoading = false;
-      });
+    final userProvider = context.read<UserProvider>();
+    final success = await userProvider.changePassword(
+      _currentPasswordController.text,
+      _newPasswordController.text,
+    );
 
-      // Navigate to verification screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const VerifyPasswordScreen(),
-        ),
-      );
+    setState(() {
+      _isLoading = false;
     });
+
+    if (success) {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const PasswordChangedScreen(),
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        _showError(userProvider.errorMessage ?? 'Failed to change password');
+      }
+    }
   }
 
   void _showError(String message) {

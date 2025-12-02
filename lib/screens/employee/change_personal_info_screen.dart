@@ -1,7 +1,10 @@
 // lib/screens/employee/change_personal_info_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/user_provider.dart';
 
 class ChangePersonalInfoScreen extends StatefulWidget {
   const ChangePersonalInfoScreen({super.key});
@@ -18,6 +21,20 @@ class _ChangePersonalInfoScreenState extends State<ChangePersonalInfoScreen> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Pre-fill with current user data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthProvider>().user;
+      if (user != null) {
+        _surnameController.text = user.lastName;
+        _firstNameController.text = user.firstName;
+        _middleNameController.text = user.middleName;
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _surnameController.dispose();
     _firstNameController.dispose();
@@ -25,13 +42,11 @@ class _ChangePersonalInfoScreenState extends State<ChangePersonalInfoScreen> {
     super.dispose();
   }
 
-  void _handleChange() {
-    if (_surnameController.text.isEmpty &&
-        _firstNameController.text.isEmpty &&
-        _middleNameController.text.isEmpty) {
+  Future<void> _handleChange() async {
+    if (_surnameController.text.isEmpty && _firstNameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please fill in at least one field'),
+          content: Text('First name and surname are required'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -42,21 +57,42 @@ class _ChangePersonalInfoScreenState extends State<ChangePersonalInfoScreen> {
       _isLoading = true;
     });
 
-    // Simulate API call
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        _isLoading = false;
-      });
+    final userProvider = context.read<UserProvider>();
+    final authProvider = context.read<AuthProvider>();
+    
+    final result = await userProvider.updateProfile(
+      firstName: _firstNameController.text.trim(),
+      lastName: _surnameController.text.trim(),
+      middleName: _middleNameController.text.trim(),
+    );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Personal information updated successfully'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-
-      Navigator.pop(context);
+    setState(() {
+      _isLoading = false;
     });
+
+    if (result != null) {
+      // Update auth provider's user
+      authProvider.updateUser(result);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Personal information updated successfully'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(userProvider.errorMessage ?? 'Failed to update profile'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   @override

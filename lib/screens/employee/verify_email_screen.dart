@@ -2,11 +2,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/user_provider.dart';
 import 'email_changed_screen.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
-  const VerifyEmailScreen({super.key});
+  final String newEmail;
+  
+  const VerifyEmailScreen({super.key, required this.newEmail});
 
   @override
   State<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
@@ -22,6 +26,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     (index) => FocusNode(),
   );
   bool _isLoading = false;
+  bool _isResending = false;
 
   @override
   void dispose() {
@@ -34,7 +39,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     super.dispose();
   }
 
-  void _handleVerify() {
+  Future<void> _handleVerify() async {
     String code = _controllers.map((c) => c.text).join();
     if (code.length != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -50,20 +55,55 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       _isLoading = true;
     });
 
-    // Simulate verification
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        _isLoading = false;
-      });
+    final userProvider = context.read<UserProvider>();
+    final success = await userProvider.changeEmailVerify(widget.newEmail, code);
 
-      // Navigate to success screen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const EmailChangedScreen(),
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (success) {
+      if (mounted) {
+        // Navigate to success screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const EmailChangedScreen(),
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(userProvider.errorMessage ?? 'Invalid verification code'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleResendOtp() async {
+    setState(() {
+      _isResending = true;
+    });
+
+    final userProvider = context.read<UserProvider>();
+    final success = await userProvider.changeEmailSendOtp(widget.newEmail);
+
+    setState(() {
+      _isResending = false;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? 'Verification code resent' : (userProvider.errorMessage ?? 'Failed to resend code')),
+          backgroundColor: success ? AppColors.success : AppColors.error,
         ),
       );
-    });
+    }
   }
 
   @override
@@ -146,6 +186,31 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                                 ),
                               ),
                       ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Resend OTP Button
+                    TextButton(
+                      onPressed: _isResending ? null : _handleResendOtp,
+                      child: _isResending
+                          ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    AppColors.primary),
+                              ),
+                            )
+                          : const Text(
+                              'Resend Code',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                     ),
                   ],
                 ),

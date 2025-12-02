@@ -90,7 +90,9 @@ class UserProvider with ChangeNotifier {
   Future<UserModel?> updateProfile({
     String? firstName,
     String? lastName,
+    String? middleName,
     String? phone,
+    String? profileImageUrl,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -100,7 +102,9 @@ class UserProvider with ChangeNotifier {
       final response = await _apiService.updateProfile(
         firstName: firstName,
         lastName: lastName,
+        middleName: middleName,
         phone: phone,
+        profileImageUrl: profileImageUrl,
       );
       
       // Backend returns {success, data: {user}}
@@ -118,6 +122,65 @@ class UserProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return _user;
+    } catch (e) {
+      _errorMessage = 'Network error. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // Direct phone update without OTP
+  Future<bool> updatePhone(String newPhone) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiService.updatePhone(newPhone);
+      
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to update phone';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+      
+      // Update local user with new phone
+      if (_user != null) {
+        _user = _user!.copyWith(phone: newPhone);
+      }
+      
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Network error. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Upload file
+  Future<String?> uploadFile(String filePath, String folder) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiService.uploadFile(filePath, folder);
+      
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to upload file';
+        _isLoading = false;
+        notifyListeners();
+        return null;
+      }
+      
+      _isLoading = false;
+      notifyListeners();
+      return response['data']?['url'];
     } catch (e) {
       _errorMessage = 'Network error. Please try again.';
       _isLoading = false;

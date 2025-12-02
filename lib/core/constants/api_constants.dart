@@ -24,11 +24,12 @@ class ApiConstants {
   static const String profile = '/user/profile';
   static const String updateProfile = '/user/profile';
   static const String settings = '/user/settings';
-  static const String changeEmailSendOtp = '/user/email/send-otp';
-  static const String changeEmailVerify = '/user/email/verify';
-  static const String changePhoneSendOtp = '/user/phone/send-otp';
-  static const String changePhoneVerify = '/user/phone/verify';
-  static const String changePassword = '/user/password';
+  static const String changeEmailSendOtp = '/user/email/change/send-otp';
+  static const String changeEmailVerify = '/user/email/change/verify';
+  static const String changePhoneSendOtp = '/user/phone/change/send-otp';
+  static const String changePhoneVerify = '/user/phone/change/verify';
+  static const String updatePhone = '/user/phone';
+  static const String changePassword = '/user/password/change';
   
   // Attendance endpoints
   static const String attendanceScan = '/attendance/scan';

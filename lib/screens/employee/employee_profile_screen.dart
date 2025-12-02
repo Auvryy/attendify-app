@@ -40,10 +40,10 @@ class EmployeeProfileScreen extends StatelessWidget {
                         shape: BoxShape.circle,
                         color: AppColors.divider,
                       ),
-                      child: user?.profilePicture != null
+                      child: user?.profileImageUrl != null && user!.profileImageUrl!.isNotEmpty
                         ? ClipOval(
                             child: Image.network(
-                              user!.profilePicture!,
+                              user.profileImageUrl!,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => const Icon(
                                 Icons.person,

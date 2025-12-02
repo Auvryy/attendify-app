@@ -1,122 +1,154 @@
 // lib/screens/employee/account_security_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/auth_provider.dart';
 import 'change_personal_info_screen.dart';
 import 'change_phone_number_screen.dart';
 import 'change_password_screen.dart';
 import 'change_email_screen.dart';
-import 'change_role_screen.dart';
 
 class AccountSecurityScreen extends StatelessWidget {
   const AccountSecurityScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            _buildHeader(context),
-            
-            // Main content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 10),
-                    
-                    // Account Section
-                    _buildSectionLabel('Account'),
-                    const SizedBox(height: 12),
-                    
-                    _buildAccountField(
-                      label: 'Surname, First Name Middle Name',
-                      value: 'Surname, First Name Middle Name',
-                      onEdit: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ChangePersonalInfoScreen(),
-                          ),
-                        );
-                      },
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        final user = authProvider.user;
+        
+        // Format display values
+        final fullName = user != null 
+            ? user.formattedName 
+            : 'Name not available';
+        final phone = user?.phone ?? 'Phone not set';
+        final email = user?.email ?? 'Email not set';
+        final role = user?.role.toUpperCase() ?? 'EMPLOYEE';
+        
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Header
+                _buildHeader(context, user?.profileImageUrl),
+                
+                // Main content
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 10),
+                        
+                        // Account Section
+                        _buildSectionLabel('Account'),
+                        const SizedBox(height: 12),
+                        
+                        _buildAccountField(
+                          label: 'Full Name',
+                          value: fullName,
+                          onEdit: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ChangePersonalInfoScreen(),
+                              ),
+                            );
+                            // Refresh profile if changes were made
+                            if (result == true) {
+                              authProvider.init();
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        _buildAccountField(
+                          label: 'Mobile Number',
+                          value: _maskPhone(phone),
+                          onEdit: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ChangePhoneNumberScreen(),
+                              ),
+                            );
+                            if (result == true) {
+                              authProvider.init();
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        _buildAccountField(
+                          label: 'Email',
+                          value: _maskEmail(email),
+                          onEdit: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ChangeEmailScreen(),
+                              ),
+                            );
+                            if (result == true) {
+                              authProvider.init();
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        _buildAccountField(
+                          label: 'Role',
+                          value: role,
+                          onEdit: null, // Role cannot be changed by user
+                        ),
+                        
+                        const SizedBox(height: 30),
+                        
+                        // Security Section
+                        _buildSectionLabel('Security'),
+                        const SizedBox(height: 12),
+                        
+                        _buildSecurityMenuItem(
+                          title: 'Change Password',
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ChangePasswordScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    
-                    _buildAccountField(
-                      label: 'Mobile Number',
-                      value: '09*********',
-                      onEdit: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ChangePhoneNumberScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    _buildAccountField(
-                      label: 'Email',
-                      value: 'example@gmail.com',
-                      onEdit: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ChangeEmailScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    _buildAccountField(
-                      label: 'Role',
-                      value: 'Role',
-                      onEdit: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ChangeRoleScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    
-                    const SizedBox(height: 30),
-                    
-                    // Security Section
-                    _buildSectionLabel('Security'),
-                    const SizedBox(height: 12),
-                    
-                    _buildSecurityMenuItem(
-                      title: 'Change Password',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ChangePasswordScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  String _maskPhone(String phone) {
+    if (phone.length < 4) return phone;
+    return '${phone.substring(0, 4)}${'*' * (phone.length - 4)}';
+  }
+
+  String _maskEmail(String email) {
+    final parts = email.split('@');
+    if (parts.length != 2) return email;
+    final name = parts[0];
+    final domain = parts[1];
+    if (name.length <= 2) return email;
+    return '${name.substring(0, 2)}${'*' * (name.length - 2)}@$domain';
+  }
+
+  Widget _buildHeader(BuildContext context, String? profileImageUrl) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       decoration: BoxDecoration(
@@ -149,7 +181,7 @@ class AccountSecurityScreen extends StatelessWidget {
           
           // Title
           const Text(
-            'Profile',
+            'Account & Security',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
@@ -165,11 +197,29 @@ class AccountSecurityScreen extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.accent,
+              border: Border.all(
+                color: AppColors.accent,
+                width: 2,
+              ),
             ),
-            child: const Icon(
-              Icons.person,
-              color: AppColors.white,
-              size: 24,
+            child: ClipOval(
+              child: profileImageUrl != null
+                  ? Image.network(
+                      profileImageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.person,
+                          color: AppColors.white,
+                          size: 24,
+                        );
+                      },
+                    )
+                  : const Icon(
+                      Icons.person,
+                      color: AppColors.white,
+                      size: 24,
+                    ),
             ),
           ),
         ],
@@ -210,13 +260,26 @@ class AccountSecurityScreen extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 15,
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w400,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
           ),
           if (onEdit != null)
