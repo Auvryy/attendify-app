@@ -209,7 +209,9 @@ class ApiService {
   Future<Map<String, dynamic>> updateProfile({
     String? firstName,
     String? lastName,
+    String? middleName,
     String? phone,
+    String? profileImageUrl,
   }) async {
     final response = await http.put(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.updateProfile}'),
@@ -217,10 +219,47 @@ class ApiService {
       body: jsonEncode({
         if (firstName != null) 'first_name': firstName,
         if (lastName != null) 'last_name': lastName,
+        if (middleName != null) 'middle_name': middleName,
         if (phone != null) 'phone': phone,
+        if (profileImageUrl != null) 'profile_image_url': profileImageUrl,
       }),
     );
     return jsonDecode(response.body);
+  }
+
+  // Direct phone update without OTP
+  Future<Map<String, dynamic>> updatePhone(String newPhone) async {
+    final response = await http.put(
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.updatePhone}'),
+      headers: _headers,
+      body: jsonEncode({'phone': newPhone}),
+    );
+    return jsonDecode(response.body);
+  }
+
+  // ==================== FILE UPLOAD ENDPOINTS ====================
+
+  Future<Map<String, dynamic>> uploadFile(String filePath, String folder) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${ApiConstants.baseUrl}/upload'),
+      );
+      
+      request.headers.addAll({
+        if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
+      });
+      
+      request.fields['folder'] = folder;
+      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+      
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': 'Upload failed: $e'};
+    }
   }
 
   Future<Map<String, dynamic>> getSettings() async {

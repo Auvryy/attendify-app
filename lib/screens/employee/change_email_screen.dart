@@ -1,7 +1,9 @@
 // lib/screens/employee/change_email_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/user_provider.dart';
 import 'verify_email_screen.dart';
 
 class ChangeEmailScreen extends StatefulWidget {
@@ -21,7 +23,7 @@ class _ChangeEmailScreenState extends State<ChangeEmailScreen> {
     super.dispose();
   }
 
-  void _handleChange() {
+  Future<void> _handleChange() async {
     if (_emailController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -33,8 +35,8 @@ class _ChangeEmailScreenState extends State<ChangeEmailScreen> {
     }
 
     // Basic email validation
-    if (!_emailController.text.contains('@') ||
-        !_emailController.text.contains('.')) {
+    final email = _emailController.text.trim().toLowerCase();
+    if (!email.contains('@') || !email.contains('.')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please enter a valid email address'),
@@ -48,20 +50,33 @@ class _ChangeEmailScreenState extends State<ChangeEmailScreen> {
       _isLoading = true;
     });
 
-    // Simulate API call
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        _isLoading = false;
-      });
+    final userProvider = context.read<UserProvider>();
+    final success = await userProvider.changeEmailSendOtp(email);
 
-      // Navigate to verification screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const VerifyEmailScreen(),
-        ),
-      );
+    setState(() {
+      _isLoading = false;
     });
+
+    if (success) {
+      if (mounted) {
+        // Navigate to verification screen with the new email
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VerifyEmailScreen(newEmail: email),
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(userProvider.errorMessage ?? 'Failed to send OTP'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   @override

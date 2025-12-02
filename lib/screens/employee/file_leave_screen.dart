@@ -1,10 +1,13 @@
 // lib/screens/employee/file_leave_screen.dart
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/leave_provider.dart';
+import '../../services/api_service.dart';
 import 'request_submitted_screen.dart';
 
 class FileLeaveScreen extends StatefulWidget {
@@ -17,8 +20,13 @@ class FileLeaveScreen extends StatefulWidget {
 class _FileLeaveScreenState extends State<FileLeaveScreen> {
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _reasonController = TextEditingController();
-  String? _selectedImagePath;
+  final ImagePicker _imagePicker = ImagePicker();
+  final ApiService _apiService = ApiService();
+  
+  File? _selectedImage;
+  String? _uploadedImageUrl;
   bool _isLoading = false;
+  bool _isUploading = false;
   DateTime? _selectedDate;
 
   @override
@@ -57,11 +65,115 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
     }
   }
 
-  void _pickImage() {
-    // TODO: Implement image picker for attachment
-    setState(() {
-      _selectedImagePath = 'selected';
-    });
+  Future<void> _pickImage() async {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _getImage(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Take a Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _getImage(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _getImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 80,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path);
+          _uploadedImageUrl = null; // Reset uploaded URL
+        });
+        
+        // Automatically upload the image
+        await _uploadImage();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick image: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _uploadImage() async {
+    if (_selectedImage == null) return;
+
+    setState(() => _isUploading = true);
+
+    try {
+      final response = await _apiService.uploadFile(
+        _selectedImage!.path,
+        'leave_attachments',
+      );
+
+      // Backend returns {success: true, data: {url: ...}}
+      if (response['success'] != true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response['message'] ?? 'Upload failed'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      } else {
+        final uploadedUrl = response['data']?['url'];
+        if (uploadedUrl != null) {
+          setState(() {
+            _uploadedImageUrl = uploadedUrl;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Photo uploaded successfully'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload image: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploading = false);
+      }
+    }
   }
 
   Future<void> _submitLeaveRequest() async {
@@ -85,13 +197,18 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
       return;
     }
 
+    // If image is selected but not yet uploaded, upload it first
+    if (_selectedImage != null && _uploadedImageUrl == null && !_isUploading) {
+      await _uploadImage();
+    }
+
     setState(() => _isLoading = true);
 
     final leaveProvider = context.read<LeaveProvider>();
     final success = await leaveProvider.fileLeaveRequest(
       leaveDate: DateFormat('yyyy-MM-dd').format(_selectedDate!),
       reason: _reasonController.text.trim(),
-      attachmentUrl: _selectedImagePath,
+      attachmentUrl: _uploadedImageUrl,
     );
 
     if (mounted) {
@@ -291,8 +408,11 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
   }
 
   Widget _buildPhotoUploadSection() {
+    final hasImage = _selectedImage != null;
+    final isUploaded = _uploadedImageUrl != null;
+    
     return GestureDetector(
-      onTap: _pickImage,
+      onTap: _isUploading ? null : _pickImage,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(24),
@@ -307,7 +427,7 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
         ),
         child: Column(
           children: [
-            // Image Icon
+            // Image preview or icon
             Container(
               width: 80,
               height: 80,
@@ -315,25 +435,60 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
                 color: const Color(0xFFFFFFA7),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: _selectedImagePath != null
-                  ? const Icon(
-                      Icons.check_circle,
-                      color: AppColors.success,
-                      size: 40,
-                    )
-                  : const Icon(
-                      Icons.image_outlined,
-                      color: AppColors.textSecondary,
-                      size: 40,
-                    ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: _isUploading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                        ),
+                      )
+                    : hasImage
+                        ? Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.file(
+                                _selectedImage!,
+                                fit: BoxFit.cover,
+                              ),
+                              if (isUploaded)
+                                Positioned(
+                                  bottom: 4,
+                                  right: 4,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.success,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          )
+                        : const Icon(
+                            Icons.image_outlined,
+                            color: AppColors.textSecondary,
+                            size: 40,
+                          ),
+              ),
             ),
             const SizedBox(height: 12),
 
             // Upload Text
             Text(
-              _selectedImagePath != null
-                  ? 'Photo uploaded successfully'
-                  : 'Upload proof photos here.',
+              _isUploading
+                  ? 'Uploading...'
+                  : isUploaded
+                      ? 'Photo uploaded successfully'
+                      : hasImage
+                          ? 'Tap to change photo'
+                          : 'Upload proof photos here.',
               style: const TextStyle(
                 fontSize: 14,
                 color: AppColors.secondary,

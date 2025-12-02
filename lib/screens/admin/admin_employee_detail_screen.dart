@@ -1,24 +1,157 @@
 // lib/screens/admin/admin_employee_detail_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/admin_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../models/user_model.dart';
+import '../../models/attendance_model.dart';
 
-class AdminEmployeeDetailScreen extends StatelessWidget {
-  final String employeeName;
+class AdminEmployeeDetailScreen extends StatefulWidget {
+  final String employeeId;
 
   const AdminEmployeeDetailScreen({
     super.key,
-    required this.employeeName,
+    required this.employeeId,
   });
 
   @override
+  State<AdminEmployeeDetailScreen> createState() => _AdminEmployeeDetailScreenState();
+}
+
+class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
+  UserModel? _employee;
+  List<AttendanceModel> _attendanceHistory = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEmployeeData();
+  }
+
+  Future<void> _loadEmployeeData() async {
+    final adminProvider = context.read<AdminProvider>();
+    
+    // Fetch employee details
+    final employee = await adminProvider.getEmployeeDetail(widget.employeeId);
+    
+    // Fetch attendance for this employee (we'll filter from overall attendance)
+    await adminProvider.fetchAttendance();
+    
+    if (mounted) {
+      setState(() {
+        _employee = employee;
+        // Filter attendance records for this employee
+        _attendanceHistory = adminProvider.attendanceRecords
+            .where((record) => record.userId == widget.employeeId)
+            .toList();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _handleDeleteEmployee() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Employee'),
+        content: Text('Are you sure you want to deactivate ${_employee?.fullName ?? 'this employee'}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Deactivate'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && _employee != null) {
+      setState(() => _isLoading = true);
+      
+      final adminProvider = context.read<AdminProvider>();
+      final success = await adminProvider.updateEmployeeStatus(_employee!.id, false);
+      
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Employee has been deactivated'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          Navigator.pop(context);
+        } else {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(adminProvider.errorMessage ?? 'Failed to deactivate employee'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Parse name parts
-    final nameParts = employeeName.split(', ');
-    final surname = nameParts.isNotEmpty ? nameParts[0] : '';
-    final firstMiddle = nameParts.length > 1 ? nameParts[1].split(' ') : ['', ''];
-    final firstName = firstMiddle.isNotEmpty ? firstMiddle[0] : '';
-    final middleName = firstMiddle.length > 1 ? firstMiddle.sublist(1).join(' ') : '';
+    final authProvider = context.watch<AuthProvider>();
+    final adminUser = authProvider.user;
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(context, adminUser?.profileImageUrl),
+              const Expanded(
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_employee == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(context, adminUser?.profileImageUrl),
+              const Expanded(
+                child: Center(
+                  child: Text(
+                    'Employee not found',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Separate today's attendance from previous
+    final now = DateTime.now();
+    final today = DateFormat('yyyy-MM-dd').format(now);
+    final todayAttendance = _attendanceHistory.where((a) => 
+      DateFormat('yyyy-MM-dd').format(a.date) == today
+    ).toList();
+    final previousAttendance = _attendanceHistory.where((a) => 
+      DateFormat('yyyy-MM-dd').format(a.date) != today
+    ).toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -26,7 +159,7 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
         child: Column(
           children: [
             // Header
-            _buildHeader(context),
+            _buildHeader(context, adminUser?.profileImageUrl),
 
             // Content
             Expanded(
@@ -36,7 +169,7 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Employee Profile Card
-                    _buildEmployeeProfileCard(surname, firstName, middleName),
+                    _buildEmployeeProfileCard(_employee!),
 
                     const SizedBox(height: 30),
 
@@ -52,47 +185,50 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
                     const SizedBox(height: 8),
 
                     // Today Section
-                    const Text(
-                      'Today',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
+                    if (todayAttendance.isNotEmpty) ...[
+                      const Text(
+                        'Today',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    _buildAttendanceCard(
-                      date: 'September 29, 2025',
-                      timeIn: '8:00 AM',
-                      timeOut: '5:02 PM',
-                      status: 'On Time',
-                    ),
-
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 10),
+                      ...todayAttendance.map((record) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _buildAttendanceCard(record),
+                      )),
+                      const SizedBox(height: 20),
+                    ],
 
                     // Previous History Section
-                    const Text(
-                      'Previous History',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
+                    if (previousAttendance.isNotEmpty) ...[
+                      const Text(
+                        'Previous History',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
+                      const SizedBox(height: 10),
+                      ...previousAttendance.take(10).map((record) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _buildAttendanceCard(record),
+                      )),
+                    ],
 
-                    _buildAttendanceCard(
-                      date: 'September 29, 2025',
-                      timeIn: '8:00 AM',
-                      timeOut: '5:02 PM',
-                      status: 'On Time',
-                    ),
-                    const SizedBox(height: 10),
-                    _buildAttendanceCard(
-                      date: 'September 29, 2025',
-                      timeIn: '8:00 AM',
-                      timeOut: '5:02 PM',
-                      status: 'On Time',
-                    ),
+                    if (todayAttendance.isEmpty && previousAttendance.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        child: const Center(
+                          child: Text(
+                            'No attendance records found',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -103,7 +239,7 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, String? profileImageUrl) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       decoration: BoxDecoration(
@@ -157,20 +293,15 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
               ),
             ),
             child: ClipOval(
-              child: Image.asset(
-                'assets/images/profile-avatar.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: AppColors.accent,
-                    child: const Icon(
-                      Icons.person,
-                      color: AppColors.white,
-                      size: 24,
-                    ),
-                  );
-                },
-              ),
+              child: profileImageUrl != null && profileImageUrl.isNotEmpty
+                  ? Image.network(
+                      profileImageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _buildDefaultAvatar();
+                      },
+                    )
+                  : _buildDefaultAvatar(),
             ),
           ),
         ],
@@ -178,7 +309,18 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmployeeProfileCard(String surname, String firstName, String middleName) {
+  Widget _buildDefaultAvatar() {
+    return Container(
+      color: AppColors.accent,
+      child: const Icon(
+        Icons.person,
+        color: AppColors.white,
+        size: 24,
+      ),
+    );
+  }
+
+  Widget _buildEmployeeProfileCard(UserModel employee) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -205,10 +347,24 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: AppColors.divider,
                 ),
-                child: const Icon(
-                  Icons.person,
-                  color: AppColors.white,
-                  size: 35,
+                child: ClipOval(
+                  child: employee.profileImageUrl != null && employee.profileImageUrl!.isNotEmpty
+                      ? Image.network(
+                          employee.profileImageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.person,
+                              color: AppColors.white,
+                              size: 35,
+                            );
+                          },
+                        )
+                      : const Icon(
+                          Icons.person,
+                          color: AppColors.white,
+                          size: 35,
+                        ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -218,7 +374,7 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      employeeName,
+                      employee.fullName,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -226,9 +382,9 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Role',
-                      style: TextStyle(
+                    Text(
+                      employee.role.toUpperCase(),
+                      style: const TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary,
                       ),
@@ -238,9 +394,7 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
               ),
               // Delete button
               IconButton(
-                onPressed: () {
-                  // Handle delete employee
-                },
+                onPressed: _handleDeleteEmployee,
                 icon: const Icon(
                   Icons.delete_outline,
                   color: AppColors.textSecondary,
@@ -254,26 +408,31 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
           // Info Fields
           _buildInfoRow(
             label: 'Surname',
-            value: surname,
+            value: employee.lastName,
             secondLabel: 'Middle Name',
-            secondValue: middleName,
+            secondValue: employee.middleName,
           ),
           const SizedBox(height: 12),
           _buildInfoRow(
             label: 'First Name',
-            value: firstName,
+            value: employee.firstName,
             secondLabel: 'Role',
-            secondValue: 'Employee',
+            secondValue: employee.role,
           ),
           const SizedBox(height: 12),
           _buildSingleInfoRow(
             label: 'Mobile Number',
-            value: '09876543219',
+            value: employee.phone.isNotEmpty ? employee.phone : 'Not set',
           ),
           const SizedBox(height: 12),
           _buildSingleInfoRow(
             label: 'Email Address',
-            value: 'amadorroberto75@gmail.com',
+            value: employee.email,
+          ),
+          const SizedBox(height: 12),
+          _buildSingleInfoRow(
+            label: 'Employee ID',
+            value: employee.employeeId ?? 'Not set',
           ),
         ],
       ),
@@ -355,13 +514,39 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAttendanceCard({
-    required String date,
-    required String timeIn,
-    required String timeOut,
-    required String status,
-  }) {
-    Color statusColor = status == 'On Time' ? AppColors.success : AppColors.error;
+  Widget _buildAttendanceCard(AttendanceModel record) {
+    final dateStr = DateFormat('MMMM d, yyyy').format(record.date);
+    final timeInStr = record.timeIn != null 
+        ? DateFormat('h:mm a').format(record.timeIn!) 
+        : 'N/A';
+    final timeOutStr = record.timeOut != null 
+        ? DateFormat('h:mm a').format(record.timeOut!) 
+        : 'N/A';
+    
+    // Determine status display
+    String statusText;
+    Color statusColor;
+    switch (record.status.toLowerCase()) {
+      case 'on_time':
+        statusText = 'On Time';
+        statusColor = AppColors.success;
+        break;
+      case 'late':
+        statusText = 'Late';
+        statusColor = AppColors.error;
+        break;
+      case 'absent':
+        statusText = 'Absent';
+        statusColor = AppColors.error;
+        break;
+      case 'on_leave':
+        statusText = 'On Leave';
+        statusColor = AppColors.warning;
+        break;
+      default:
+        statusText = record.status;
+        statusColor = AppColors.textSecondary;
+    }
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -383,7 +568,7 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  date,
+                  dateStr,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -393,9 +578,9 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    _buildTimeColumn('Time in', timeIn),
+                    _buildTimeColumn('Time in', timeInStr),
                     const SizedBox(width: 20),
-                    _buildTimeColumn('Time out', timeOut),
+                    _buildTimeColumn('Time out', timeOutStr),
                   ],
                 ),
               ],
@@ -408,7 +593,7 @@ class AdminEmployeeDetailScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
-              status,
+              statusText,
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,

@@ -1,7 +1,10 @@
 // lib/screens/employee/notification_settings_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/user_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -16,74 +19,173 @@ class _NotificationSettingsScreenState
   bool _smsNotifications = true;
   bool _appNotifications = true;
   bool _emailNotifications = true;
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Use addPostFrameCallback to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSettings();
+    });
+  }
+
+  Future<void> _loadSettings() async {
+    if (!mounted) return;
+    
+    final userProvider = context.read<UserProvider>();
+    await userProvider.getSettings();
+    
+    if (mounted) {
+      final settings = userProvider.settings;
+      setState(() {
+        _smsNotifications = settings?['sms_notifications'] ?? true;
+        _appNotifications = settings?['app_notifications'] ?? true;
+        _emailNotifications = settings?['email_notifications'] ?? true;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _updateSetting(String key, bool value) async {
+    setState(() {
+      _isSaving = true;
+    });
+
+    final userProvider = context.read<UserProvider>();
+    final success = await userProvider.updateSettings({key: value});
+
+    if (mounted) {
+      setState(() {
+        _isSaving = false;
+      });
+
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(userProvider.errorMessage ?? 'Failed to update settings'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        // Revert the toggle if update failed
+        _loadSettings();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final user = authProvider.user;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
             // Header
-            _buildHeader(context),
+            _buildHeader(context, user?.profileImageUrl),
 
             // Content
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 10),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : Stack(
+                      children: [
+                        SingleChildScrollView(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 10),
 
-                    // Notifications Label
-                    const Text(
-                      'Notifications',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+                              // Notifications Label
+                              const Text(
+                                'Notifications',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
 
-                    // SMS Notifications
-                    _buildNotificationToggle(
-                      title: 'SMS notifications',
-                      value: _smsNotifications,
-                      onChanged: (value) {
-                        setState(() {
-                          _smsNotifications = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 12),
+                              // SMS Notifications
+                              _buildNotificationToggle(
+                                title: 'SMS notifications',
+                                value: _smsNotifications,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _smsNotifications = value;
+                                  });
+                                  _updateSetting('sms_notifications', value);
+                                },
+                              ),
+                              const SizedBox(height: 12),
 
-                    // App Notifications
-                    _buildNotificationToggle(
-                      title: 'App Notifications',
-                      value: _appNotifications,
-                      onChanged: (value) {
-                        setState(() {
-                          _appNotifications = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 12),
+                              // App Notifications
+                              _buildNotificationToggle(
+                                title: 'App Notifications',
+                                value: _appNotifications,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _appNotifications = value;
+                                  });
+                                  _updateSetting('app_notifications', value);
+                                },
+                              ),
+                              const SizedBox(height: 12),
 
-                    // Email Notifications
-                    _buildNotificationToggle(
-                      title: 'Email Notifications',
-                      value: _emailNotifications,
-                      onChanged: (value) {
-                        setState(() {
-                          _emailNotifications = value;
-                        });
-                      },
+                              // Email Notifications
+                              _buildNotificationToggle(
+                                title: 'Email Notifications',
+                                value: _emailNotifications,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _emailNotifications = value;
+                                  });
+                                  _updateSetting('email_notifications', value);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_isSaving)
+                          Positioned(
+                            top: 10,
+                            right: 20,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    height: 12,
+                                    width: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Saving...',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
             ),
           ],
         ),
@@ -91,7 +193,7 @@ class _NotificationSettingsScreenState
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, String? profileImageUrl) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       decoration: BoxDecoration(
@@ -145,23 +247,29 @@ class _NotificationSettingsScreenState
               ),
             ),
             child: ClipOval(
-              child: Image.asset(
-                'assets/images/profile-avatar.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: AppColors.accent,
-                    child: const Icon(
-                      Icons.person,
-                      color: AppColors.white,
-                      size: 24,
-                    ),
-                  );
-                },
-              ),
+              child: profileImageUrl != null && profileImageUrl.isNotEmpty
+                  ? Image.network(
+                      profileImageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _buildDefaultAvatar();
+                      },
+                    )
+                  : _buildDefaultAvatar(),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDefaultAvatar() {
+    return Container(
+      color: AppColors.accent,
+      child: const Icon(
+        Icons.person,
+        color: AppColors.white,
+        size: 24,
       ),
     );
   }

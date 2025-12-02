@@ -1,101 +1,144 @@
 // lib/screens/admin/admin_attendance_history_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/admin_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../models/attendance_model.dart';
 
-class AdminAttendanceHistoryScreen extends StatelessWidget {
+class AdminAttendanceHistoryScreen extends StatefulWidget {
   const AdminAttendanceHistoryScreen({super.key});
 
   @override
+  State<AdminAttendanceHistoryScreen> createState() => _AdminAttendanceHistoryScreenState();
+}
+
+class _AdminAttendanceHistoryScreenState extends State<AdminAttendanceHistoryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AdminProvider>().fetchAttendance();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final adminUser = authProvider.user;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
             // Header
-            _buildHeader(context),
+            _buildHeader(context, adminUser?.profileImageUrl),
 
             // Content
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Today Section
-                    const Text(
-                      'Today',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
+              child: Consumer<AdminProvider>(
+                builder: (context, provider, _) {
+                  if (provider.isLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (provider.errorMessage != null) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            provider.errorMessage!,
+                            style: const TextStyle(color: AppColors.error),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => provider.fetchAttendance(),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  final records = provider.attendanceRecords;
+                  if (records.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'No attendance records found',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    );
+                  }
+
+                  // Separate today's records from previous
+                  final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                  final todayRecords = records.where((r) => 
+                    DateFormat('yyyy-MM-dd').format(r.date) == today
+                  ).toList();
+                  final previousRecords = records.where((r) => 
+                    DateFormat('yyyy-MM-dd').format(r.date) != today
+                  ).toList();
+
+                  return RefreshIndicator(
+                    onRefresh: () => provider.fetchAttendance(),
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Today Section
+                          if (todayRecords.isNotEmpty) ...[
+                            const Text(
+                              'Today',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ...todayRecords.map((record) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _buildEmployeeAttendanceCard(record),
+                            )),
+                            const SizedBox(height: 24),
+                          ],
+
+                          // Previous History Section
+                          if (previousRecords.isNotEmpty) ...[
+                            const Text(
+                              'Previous History',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ...previousRecords.take(50).map((record) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _buildEmployeeAttendanceCard(record),
+                            )),
+                          ],
+
+                          if (todayRecords.isEmpty && previousRecords.isEmpty)
+                            const Center(
+                              child: Text(
+                                'No attendance records found',
+                                style: TextStyle(color: AppColors.textSecondary),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-
-                    _buildEmployeeAttendanceCard(
-                      name: 'Amador, Roberto E.',
-                      date: 'September 29, 2025',
-                      timeIn: '8:35 AM',
-                      timeOut: '5:02 PM',
-                      status: 'Late',
-                    ),
-                    const SizedBox(height: 10),
-                    _buildEmployeeAttendanceCard(
-                      name: 'Lorenzo, Juliane Z.',
-                      date: 'September 29, 2025',
-                      timeIn: '8:00 AM',
-                      timeOut: '5:02 PM',
-                      status: 'On Time',
-                    ),
-                    const SizedBox(height: 10),
-                    _buildEmployeeAttendanceCard(
-                      name: 'Ramilo, Allianah D.',
-                      date: 'September 29, 2025',
-                      timeIn: '7:55 AM',
-                      timeOut: '5:02 PM',
-                      status: 'On Time',
-                    ),
-                    const SizedBox(height: 10),
-                    _buildEmployeeAttendanceCard(
-                      name: 'Viterbo, Ecer S.',
-                      date: 'September 29, 2025',
-                      timeIn: '7:55 AM',
-                      timeOut: '5:02 PM',
-                      status: 'On Time',
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Previous History Section
-                    const Text(
-                      'Previous History',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    _buildEmployeeAttendanceCard(
-                      name: 'Ramilo, Allianah D.',
-                      date: 'September 28, 2025',
-                      timeIn: '7:55 AM',
-                      timeOut: '5:02 PM',
-                      status: 'On Time',
-                    ),
-                    const SizedBox(height: 10),
-                    _buildEmployeeAttendanceCard(
-                      name: 'Viterbo, Ecer S.',
-                      date: 'September 28, 2025',
-                      timeIn: '7:55 AM',
-                      timeOut: '5:02 PM',
-                      status: 'On Time',
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ],
@@ -104,7 +147,7 @@ class AdminAttendanceHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, String? profileImageUrl) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       decoration: BoxDecoration(
@@ -158,20 +201,15 @@ class AdminAttendanceHistoryScreen extends StatelessWidget {
               ),
             ),
             child: ClipOval(
-              child: Image.asset(
-                'assets/images/profile-avatar.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: AppColors.accent,
-                    child: const Icon(
-                      Icons.person,
-                      color: AppColors.white,
-                      size: 24,
-                    ),
-                  );
-                },
-              ),
+              child: profileImageUrl != null && profileImageUrl.isNotEmpty
+                  ? Image.network(
+                      profileImageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _buildDefaultAvatar();
+                      },
+                    )
+                  : _buildDefaultAvatar(),
             ),
           ),
         ],
@@ -179,14 +217,50 @@ class AdminAttendanceHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmployeeAttendanceCard({
-    required String name,
-    required String date,
-    required String timeIn,
-    required String timeOut,
-    required String status,
-  }) {
-    Color statusColor = status == 'On Time' ? AppColors.success : AppColors.error;
+  Widget _buildDefaultAvatar() {
+    return Container(
+      color: AppColors.accent,
+      child: const Icon(
+        Icons.person,
+        color: AppColors.white,
+        size: 24,
+      ),
+    );
+  }
+
+  Widget _buildEmployeeAttendanceCard(AttendanceModel record) {
+    final dateStr = DateFormat('MMMM d, yyyy').format(record.date);
+    final timeInStr = record.timeIn != null 
+        ? DateFormat('h:mm a').format(record.timeIn!) 
+        : 'N/A';
+    final timeOutStr = record.timeOut != null 
+        ? DateFormat('h:mm a').format(record.timeOut!) 
+        : 'N/A';
+    
+    // Determine status display
+    String statusText;
+    Color statusColor;
+    switch (record.status.toLowerCase()) {
+      case 'on_time':
+        statusText = 'On Time';
+        statusColor = AppColors.success;
+        break;
+      case 'late':
+        statusText = 'Late';
+        statusColor = AppColors.error;
+        break;
+      case 'absent':
+        statusText = 'Absent';
+        statusColor = AppColors.error;
+        break;
+      case 'on_leave':
+        statusText = 'On Leave';
+        statusColor = AppColors.warning;
+        break;
+      default:
+        statusText = record.status;
+        statusColor = AppColors.textSecondary;
+    }
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -208,7 +282,7 @@ class AdminAttendanceHistoryScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name,
+                  record.userName ?? 'Unknown Employee',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -217,7 +291,7 @@ class AdminAttendanceHistoryScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  date,
+                  dateStr,
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
@@ -226,9 +300,9 @@ class AdminAttendanceHistoryScreen extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    _buildTimeColumn('Time in', timeIn),
+                    _buildTimeColumn('Time in', timeInStr),
                     const SizedBox(width: 20),
-                    _buildTimeColumn('Time out', timeOut),
+                    _buildTimeColumn('Time out', timeOutStr),
                   ],
                 ),
               ],
@@ -241,7 +315,7 @@ class AdminAttendanceHistoryScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
-              status,
+              statusText,
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,

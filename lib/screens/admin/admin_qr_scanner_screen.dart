@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/attendance_provider.dart';
 
@@ -15,10 +16,12 @@ class AdminQRScannerScreen extends StatefulWidget {
 }
 
 class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
+  MobileScannerController? _scannerController;
   bool _isTorchOn = false;
   bool _hasError = false;
   String _errorMessage = '';
   bool _isProcessing = false;
+  bool _scanPaused = false;
 
   // Check if camera is supported
   bool get _isCameraSupported {
@@ -29,9 +32,50 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
   @override
   void initState() {
     super.initState();
-    if (!_isCameraSupported) {
+    if (_isCameraSupported) {
+      _initializeScanner();
+    } else {
       _hasError = true;
       _errorMessage = 'Camera scanning is only available on mobile devices (Android/iOS).';
+    }
+  }
+
+  void _initializeScanner() {
+    _scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.normal,
+      facing: CameraFacing.back,
+      torchEnabled: false,
+    );
+  }
+
+  @override
+  void dispose() {
+    _scannerController?.dispose();
+    super.dispose();
+  }
+
+  void _toggleTorch() async {
+    if (_scannerController != null) {
+      await _scannerController!.toggleTorch();
+      setState(() {
+        _isTorchOn = !_isTorchOn;
+      });
+    }
+  }
+
+  void _switchCamera() async {
+    if (_scannerController != null) {
+      await _scannerController!.switchCamera();
+    }
+  }
+
+  void _handleBarcode(BarcodeCapture capture) {
+    if (_scanPaused || _isProcessing) return;
+    
+    final List<Barcode> barcodes = capture.barcodes;
+    if (barcodes.isNotEmpty && barcodes.first.rawValue != null) {
+      final String qrCode = barcodes.first.rawValue!;
+      _processQRCode(qrCode);
     }
   }
 
@@ -182,67 +226,107 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
   }
 
   Widget _buildScannerView() {
-    // This would show the actual camera on supported devices
-    // For now, show a placeholder with demo functionality
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Scanner frame
-          Container(
-            width: 280,
-            height: 280,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppColors.primary,
-                width: 3,
+    if (_scannerController == null) {
+      return _buildErrorView();
+    }
+
+    return Stack(
+      children: [
+        // Camera preview
+        MobileScanner(
+          controller: _scannerController!,
+          onDetect: _handleBarcode,
+          errorBuilder: (context, error, child) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error,
+                    color: AppColors.error,
+                    size: 60,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Camera error: ${error.errorCode}',
+                    style: const TextStyle(color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-            ),
-            child: Stack(
-              children: [
-                // Corner decorations
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  child: _buildCorner(true, true),
-                ),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: _buildCorner(true, false),
-                ),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  child: _buildCorner(false, true),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: _buildCorner(false, false),
-                ),
-                // Center icon
-                const Center(
-                  child: Icon(
-                    Icons.qr_code_2,
-                    color: Colors.white38,
-                    size: 100,
+            );
+          },
+        ),
+        // Overlay with scanner frame
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 280,
+                height: 280,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppColors.primary,
+                    width: 3,
                   ),
                 ),
-              ],
+                child: Stack(
+                  children: [
+                    // Corner decorations
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      child: _buildCorner(true, true),
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: _buildCorner(true, false),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      child: _buildCorner(false, true),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: _buildCorner(false, false),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  _isProcessing ? 'Processing...' : 'Position QR code within the frame',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Processing indicator
+        if (_isProcessing)
+          Container(
+            color: Colors.black54,
+            child: const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              ),
             ),
           ),
-          const SizedBox(height: 30),
-          const Text(
-            'Position QR code within the frame',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -272,11 +356,11 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
   Widget _buildBottomControls() {
     return Column(
       children: [
-        // Demo scan button
+        // Manual entry button (for fallback)
         ElevatedButton.icon(
-          onPressed: _showDemoScanResult,
-          icon: const Icon(Icons.qr_code_scanner),
-          label: const Text('Tap to Simulate Scan'),
+          onPressed: () => _showManualEntryDialog(),
+          icon: const Icon(Icons.keyboard),
+          label: const Text('Enter Code Manually'),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: AppColors.accent,
@@ -288,11 +372,9 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
         ),
         const SizedBox(height: 20),
         // Switch Camera Button
-        if (_isCameraSupported)
+        if (_isCameraSupported && _scannerController != null)
           InkWell(
-            onTap: () {
-              // Switch camera would go here
-            },
+            onTap: _switchCamera,
             borderRadius: BorderRadius.circular(25),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -324,6 +406,38 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
     );
   }
 
+  void _showManualEntryDialog() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Enter QR Code'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Enter employee QR code',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              if (controller.text.isNotEmpty) {
+                _processQRCode(controller.text);
+              }
+            },
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showDemoScanResult() {
     // Simulate QR code scan with demo data
     _processQRCode('demo-qr-code-employee-001');
@@ -332,18 +446,24 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
   Future<void> _processQRCode(String qrCode) async {
     if (_isProcessing) return;
     
-    setState(() => _isProcessing = true);
+    setState(() {
+      _isProcessing = true;
+      _scanPaused = true;
+    });
+    
+    // Pause the scanner
+    _scannerController?.stop();
     
     final provider = context.read<AttendanceProvider>();
     final result = await provider.scanAttendance(qrCode);
     
-    setState(() => _isProcessing = false);
-    
     if (!mounted) return;
+    
+    setState(() => _isProcessing = false);
     
     if (result != null) {
       // Show success dialog
-      showDialog(
+      await showDialog(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
@@ -378,6 +498,14 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  result['employee_name'] ?? result['attendance']?['employee_name'] ?? 'Employee',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 const Text(
                   'Attendance has been successfully recorded.',
                   style: TextStyle(
@@ -407,6 +535,28 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
+                      const Spacer(),
+                      Builder(
+                        builder: (ctx) {
+                          final status = result['status'] ?? result['attendance']?['status'] ?? 'on_time';
+                          final isOnTime = status == 'on_time';
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isOnTime ? AppColors.success : AppColors.error,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              isOnTime ? 'On Time' : 'Late',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -416,6 +566,7 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(dialogContext);
+                  _resumeScanning();
                 },
                 child: const Text('Scan Another'),
               ),
@@ -436,7 +587,7 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
       );
     } else {
       // Show error dialog
-      showDialog(
+      await showDialog(
         context: context,
         builder: (dialogContext) {
           return AlertDialog(
@@ -477,12 +628,14 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(dialogContext);
+                  Navigator.pop(context);
                 },
                 child: const Text('Close'),
               ),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(dialogContext);
+                  _resumeScanning();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.secondary,
@@ -495,5 +648,12 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
         },
       );
     }
+  }
+
+  void _resumeScanning() {
+    setState(() {
+      _scanPaused = false;
+    });
+    _scannerController?.start();
   }
 }

@@ -90,7 +90,9 @@ class UserProvider with ChangeNotifier {
   Future<UserModel?> updateProfile({
     String? firstName,
     String? lastName,
+    String? middleName,
     String? phone,
+    String? profileImageUrl,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -100,7 +102,9 @@ class UserProvider with ChangeNotifier {
       final response = await _apiService.updateProfile(
         firstName: firstName,
         lastName: lastName,
+        middleName: middleName,
         phone: phone,
+        profileImageUrl: profileImageUrl,
       );
       
       // Backend returns {success, data: {user}}
@@ -126,6 +130,65 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  // Direct phone update without OTP
+  Future<bool> updatePhone(String newPhone) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiService.updatePhone(newPhone);
+      
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to update phone';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+      
+      // Update local user with new phone
+      if (_user != null) {
+        _user = _user!.copyWith(phone: newPhone);
+      }
+      
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Network error. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Upload file
+  Future<String?> uploadFile(String filePath, String folder) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiService.uploadFile(filePath, folder);
+      
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to upload file';
+        _isLoading = false;
+        notifyListeners();
+        return null;
+      }
+      
+      _isLoading = false;
+      notifyListeners();
+      return response['data']?['url'];
+    } catch (e) {
+      _errorMessage = 'Network error. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
   // Set user (for after login/register)
   void setUser(UserModel user) {
     _user = user;
@@ -141,54 +204,49 @@ class UserProvider with ChangeNotifier {
   // ==================== SETTINGS ====================
 
   Future<bool> getSettings() async {
-    _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    // Don't set loading to avoid setState during build issues
 
     try {
       final response = await _apiService.getSettings();
       
-      if (response['error'] != null) {
-        _errorMessage = response['error'];
-        _isLoading = false;
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to get settings';
         notifyListeners();
         return false;
       }
       
-      _settings = response['settings'];
-      _isLoading = false;
+      // Backend returns {success, data: {...settings}}
+      _settings = response['data'];
       notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = 'Network error. Please try again.';
-      _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
   Future<bool> updateSettings(Map<String, dynamic> newSettings) async {
-    _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
 
     try {
       final response = await _apiService.updateSettings(newSettings);
       
-      if (response['error'] != null) {
-        _errorMessage = response['error'];
-        _isLoading = false;
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to update settings';
         notifyListeners();
         return false;
       }
       
-      _settings = response['settings'];
-      _isLoading = false;
+      // Backend returns {success, data: {settings: {...}}}
+      if (response['data'] != null && response['data']['settings'] != null) {
+        _settings = response['data']['settings'];
+      }
       notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = 'Network error. Please try again.';
-      _isLoading = false;
       notifyListeners();
       return false;
     }

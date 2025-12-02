@@ -126,7 +126,7 @@ class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) => AdminEmployeeDetailScreen(
-                                          employeeName: employee.fullName,
+                                          employeeId: employee.id,
                                         ),
                                       ),
                                     );
