@@ -48,9 +48,11 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
       return;
     }
 
-    // Basic phone validation
+    // Basic phone validation - allow various formats
     final phone = _phoneController.text.trim();
-    if (phone.length < 10) {
+    // Remove common formatting characters for length check
+    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
+    if (cleanPhone.length < 7 || cleanPhone.length > 15) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please enter a valid phone number'),

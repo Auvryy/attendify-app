@@ -2,14 +2,120 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/user_provider.dart';
+import '../../services/api_service.dart';
 import 'account_security_screen.dart';
 import 'notification_settings_screen.dart';
 import 'about_us_screen.dart';
 
-class EmployeeProfileScreen extends StatelessWidget {
+class EmployeeProfileScreen extends StatefulWidget {
   const EmployeeProfileScreen({super.key});
+
+  @override
+  State<EmployeeProfileScreen> createState() => _EmployeeProfileScreenState();
+}
+
+class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
+  final ImagePicker _imagePicker = ImagePicker();
+  final ApiService _apiService = ApiService();
+  bool _isUploadingPhoto = false;
+
+  Future<void> _pickAndUploadProfileImage() async {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _getImage(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Take a Photo'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _getImage(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _getImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() => _isUploadingPhoto = true);
+        
+        // Upload the image
+        final response = await _apiService.uploadFile(
+          pickedFile.path,
+          'profile_images',
+        );
+
+        if (response['success'] == true && response['data']?['url'] != null) {
+          final imageUrl = response['data']['url'];
+          
+          // Update profile with new image URL
+          final userProvider = context.read<UserProvider>();
+          final updatedUser = await userProvider.updateProfile(
+            profileImageUrl: imageUrl,
+          );
+
+          if (updatedUser != null && mounted) {
+            // Update auth provider's user
+            context.read<AuthProvider>().updateUser(updatedUser);
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Profile photo updated successfully'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(response['message'] ?? 'Failed to upload photo'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+        }
+        
+        if (mounted) {
+          setState(() => _isUploadingPhoto = false);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploadingPhoto = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick image: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,31 +138,68 @@ class EmployeeProfileScreen extends StatelessWidget {
                   children: [
                     const SizedBox(height: 20),
 
-                    // Profile Avatar
-                    Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.divider,
-                      ),
-                      child: user?.profileImageUrl != null && user!.profileImageUrl!.isNotEmpty
-                        ? ClipOval(
-                            child: Image.network(
-                              user.profileImageUrl!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.person,
+                    // Profile Avatar with upload button
+                    GestureDetector(
+                      onTap: _isUploadingPhoto ? null : _pickAndUploadProfileImage,
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.divider,
+                            ),
+                            child: _isUploadingPhoto
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 3,
+                                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                                    ),
+                                  )
+                                : user?.profileImageUrl != null && user!.profileImageUrl!.isNotEmpty
+                                    ? ClipOval(
+                                        child: Image.network(
+                                          user.profileImageUrl!,
+                                          fit: BoxFit.cover,
+                                          width: 120,
+                                          height: 120,
+                                          errorBuilder: (_, __, ___) => const Icon(
+                                            Icons.person,
+                                            color: AppColors.white,
+                                            size: 60,
+                                          ),
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.person,
+                                        color: AppColors.white,
+                                        size: 60,
+                                      ),
+                          ),
+                          // Camera icon overlay
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.background,
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
                                 color: AppColors.white,
-                                size: 60,
+                                size: 18,
                               ),
                             ),
-                          )
-                        : const Icon(
-                            Icons.person,
-                            color: AppColors.white,
-                            size: 60,
                           ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 20),
 

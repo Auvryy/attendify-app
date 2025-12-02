@@ -204,54 +204,49 @@ class UserProvider with ChangeNotifier {
   // ==================== SETTINGS ====================
 
   Future<bool> getSettings() async {
-    _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    // Don't set loading to avoid setState during build issues
 
     try {
       final response = await _apiService.getSettings();
       
-      if (response['error'] != null) {
-        _errorMessage = response['error'];
-        _isLoading = false;
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to get settings';
         notifyListeners();
         return false;
       }
       
-      _settings = response['settings'];
-      _isLoading = false;
+      // Backend returns {success, data: {...settings}}
+      _settings = response['data'];
       notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = 'Network error. Please try again.';
-      _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
   Future<bool> updateSettings(Map<String, dynamic> newSettings) async {
-    _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
 
     try {
       final response = await _apiService.updateSettings(newSettings);
       
-      if (response['error'] != null) {
-        _errorMessage = response['error'];
-        _isLoading = false;
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to update settings';
         notifyListeners();
         return false;
       }
       
-      _settings = response['settings'];
-      _isLoading = false;
+      // Backend returns {success, data: {settings: {...}}}
+      if (response['data'] != null && response['data']['settings'] != null) {
+        _settings = response['data']['settings'];
+      }
       notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = 'Network error. Please try again.';
-      _isLoading = false;
       notifyListeners();
       return false;
     }

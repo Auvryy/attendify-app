@@ -134,26 +134,30 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
         'leave_attachments',
       );
 
-      if (response['error'] != null) {
+      // Backend returns {success: true, data: {url: ...}}
+      if (response['success'] != true) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(response['error']),
+              content: Text(response['message'] ?? 'Upload failed'),
               backgroundColor: AppColors.error,
             ),
           );
         }
       } else {
-        setState(() {
-          _uploadedImageUrl = response['url'];
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Photo uploaded successfully'),
-              backgroundColor: AppColors.success,
-            ),
-          );
+        final uploadedUrl = response['data']?['url'];
+        if (uploadedUrl != null) {
+          setState(() {
+            _uploadedImageUrl = uploadedUrl;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Photo uploaded successfully'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+          }
         }
       }
     } catch (e) {

@@ -25,10 +25,15 @@ class _NotificationSettingsScreenState
   @override
   void initState() {
     super.initState();
-    _loadSettings();
+    // Use addPostFrameCallback to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSettings();
+    });
   }
 
   Future<void> _loadSettings() async {
+    if (!mounted) return;
+    
     final userProvider = context.read<UserProvider>();
     await userProvider.getSettings();
     
