@@ -55,10 +55,12 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         } else {
           // Show error
+          print('[LOGIN SCREEN] Login failed. Error message: ${auth.errorMessage}');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(auth.errorMessage ?? 'Login failed'),
               backgroundColor: AppColors.error,
+              duration: const Duration(seconds: 5),
             ),
           );
         }

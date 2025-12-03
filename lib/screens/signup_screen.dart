@@ -21,14 +21,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _mobileController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
   final _emailController = TextEditingController();
   final _otpController = TextEditingController();
 
   String? _selectedBarangayId;
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   
   // Registration flow state
@@ -65,8 +61,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _mobileController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
     _emailController.dispose();
     _otpController.dispose();
     super.dispose();
@@ -139,7 +133,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     final auth = context.read<AuthProvider>();
     final success = await auth.completeRegistration(
-      password: _passwordController.text,
       firstName: _firstNameController.text.trim(),
       lastName: _lastNameController.text.trim(),
       phone: _mobileController.text.trim(),
@@ -150,18 +143,101 @@ class _SignUpScreenState extends State<SignUpScreen> {
       setState(() => _isLoading = false);
       
       if (success) {
-        _showSuccess('Registration successful! Please login.');
-        // Clear auth state
-        auth.clearError();
-        // Navigate to login
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
+        // Show pending approval dialog
+        _showPendingApprovalDialog();
       } else {
         _showError(auth.errorMessage ?? 'Registration failed');
       }
     }
+  }
+  
+  void _showPendingApprovalDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.hourglass_top, color: AppColors.warning, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Registration Pending',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Your registration has been submitted successfully!',
+              style: TextStyle(fontSize: 16, color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.info.withOpacity(0.3)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: AppColors.info, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Your barangay admin will review your registration. You\'ll receive an email once approved.',
+                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                // Clear auth state
+                context.read<AuthProvider>().clearError();
+                // Navigate to login
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.buttonPrimary,
+                foregroundColor: AppColors.black,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Go to Login', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showError(String message) {
@@ -476,41 +552,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
         const SizedBox(height: 24),
 
-        // Security
-        const Text('Security', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        const SizedBox(height: 8),
-
-        CustomTextField(
-          label: 'Create a strong password',
-          controller: _passwordController,
-          prefixIcon: Icons.lock_outline,
-          obscureText: _obscurePassword,
-          suffixIcon: IconButton(
-            icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: AppColors.textSecondary),
-            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+        // Info box about password
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.info.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.info.withOpacity(0.3)),
           ),
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Please create a password';
-            if (v.length < 6) return 'Password must be at least 6 characters';
-            return null;
-          },
-        ),
-        const SizedBox(height: 12),
-
-        CustomTextField(
-          label: 'Retype password',
-          controller: _confirmPasswordController,
-          prefixIcon: Icons.lock_outline,
-          obscureText: _obscureConfirmPassword,
-          suffixIcon: IconButton(
-            icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: AppColors.textSecondary),
-            onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+          child: const Row(
+            children: [
+              Icon(Icons.info_outline, color: AppColors.info, size: 20),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'A temporary password will be sent to your email once your registration is approved by the admin.',
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                ),
+              ),
+            ],
           ),
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Please retype your password';
-            if (v != _passwordController.text) return 'Passwords do not match';
-            return null;
-          },
         ),
 
         const SizedBox(height: 24),

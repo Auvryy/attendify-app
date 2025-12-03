@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/admin_provider.dart';
 import 'admin_attendance_history_screen.dart';
 import 'admin_leave_requests_screen.dart';
+import 'admin_pending_registrations_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -21,7 +22,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AdminProvider>().fetchDashboard();
+      final adminProvider = context.read<AdminProvider>();
+      adminProvider.fetchDashboard();
+      adminProvider.fetchPendingRegistrations(); // Also fetch pending registrations
     });
   }
 
@@ -65,6 +68,28 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     const SizedBox(height: 30),
 
                     // Menu Items
+                    Consumer<AdminProvider>(
+                      builder: (context, admin, _) {
+                        // Use actual list count if available, fallback to dashboard count
+                        final pendingCount = admin.pendingRegistrations.isNotEmpty 
+                            ? admin.pendingRegistrations.where((r) => r.isPending).length
+                            : admin.pendingRegistrationsCount;
+                        return _buildMenuItem(
+                          title: 'Pending Registrations',
+                          badge: pendingCount > 0 ? pendingCount : null,
+                          badgeColor: AppColors.warning,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AdminPendingRegistrationsScreen(),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 15),
                     _buildMenuItem(
                       title: 'Attendance History',
                       onTap: () {
@@ -77,14 +102,20 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       },
                     ),
                     const SizedBox(height: 15),
-                    _buildMenuItem(
-                      title: 'Leave Requests',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AdminLeaveRequestsScreen(),
-                          ),
+                    Consumer<AdminProvider>(
+                      builder: (context, admin, _) {
+                        return _buildMenuItem(
+                          title: 'Leave Requests',
+                          badge: admin.pendingLeaves > 0 ? admin.pendingLeaves : null,
+                          badgeColor: AppColors.info,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AdminLeaveRequestsScreen(),
+                              ),
+                            );
+                          },
                         );
                       },
                     ),
@@ -233,6 +264,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   Widget _buildMenuItem({
     required String title,
     required VoidCallback onTap,
+    int? badge,
+    Color? badgeColor,
   }) {
     return InkWell(
       onTap: onTap,
@@ -260,6 +293,24 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 color: AppColors.textPrimary,
               ),
             ),
+            if (badge != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: badgeColor ?? AppColors.accent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$badge',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
             const Spacer(),
             const Icon(
               Icons.chevron_right,
