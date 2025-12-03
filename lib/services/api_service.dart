@@ -104,18 +104,16 @@ class ApiService {
 
   Future<Map<String, dynamic>> registerComplete({
     required String email,
-    required String password,
     required String firstName,
     required String lastName,
     required String phone,
-    required String barangayId,  // Changed to String for UUID
+    required String barangayId,
   }) async {
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.registerComplete}'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'email': email,
-        'password': password,
         'first_name': firstName,
         'last_name': lastName,
         'phone': phone,
@@ -142,10 +140,12 @@ class ApiService {
         body: jsonEncode({'email': email, 'password': password}),
       );
       
-      print('Login response status: ${response.statusCode}');
-      print('Login response body: ${response.body}');
+      print('[LOGIN API] Response status: ${response.statusCode}');
+      print('[LOGIN API] Response body: ${response.body}');
       
       final body = jsonDecode(response.body);
+      print('[LOGIN API] Parsed success: ${body['success']}');
+      print('[LOGIN API] Parsed message: ${body['message']}');
       // Backend returns {success, data: {access_token, refresh_token, user}}
       if (response.statusCode == 200 && body['success'] == true) {
         final data = body['data'];
@@ -188,12 +188,30 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> logout() async {
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.logout}'),
-      headers: _headers,
-    );
+    // Save current token before clearing
+    final token = _accessToken;
+    
+    // Clear tokens first to prevent any retries with invalid token
     await clearTokens();
-    return jsonDecode(response.body);
+    
+    // Only call logout API if we had a token
+    if (token != null && token.isNotEmpty) {
+      try {
+        final response = await http.post(
+          Uri.parse('${ApiConstants.baseUrl}${ApiConstants.logout}'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+        return jsonDecode(response.body);
+      } catch (e) {
+        // Ignore errors - we've already cleared local tokens
+        return {'success': true, 'message': 'Logged out locally'};
+      }
+    }
+    
+    return {'success': true, 'message': 'Logged out'};
   }
 
   // ==================== USER ENDPOINTS ====================
@@ -396,7 +414,12 @@ class ApiService {
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.adminDashboard}'),
       headers: _headers,
     );
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+    // Backend returns {success, data: {...dashboard stats}}
+    if (body['success'] == true && body['data'] != null) {
+      return body['data'];
+    }
+    return {'error': body['message'] ?? 'Failed to fetch dashboard'};
   }
 
   Future<Map<String, dynamic>> getAdminEmployees({int? barangayId}) async {
@@ -521,5 +544,48 @@ class ApiService {
       };
     }
     return {'error': body['message'] ?? 'Failed to fetch barangays'};
+  }
+
+  // ==================== PENDING REGISTRATIONS ENDPOINTS ====================
+
+  Future<Map<String, dynamic>> getPendingRegistrations({String? status}) async {
+    String url = '${ApiConstants.baseUrl}/admin/pending-registrations';
+    if (status != null) {
+      url += '?status=$status';
+    }
+    print('[API] Fetching pending registrations from: $url');
+    final response = await http.get(
+      Uri.parse(url),
+      headers: _headers,
+    );
+    print('[API] Response status: ${response.statusCode}');
+    print('[API] Response body: ${response.body}');
+    final body = jsonDecode(response.body);
+    if (body['success'] == true && body['data'] != null) {
+      final registrations = body['data']['registrations'] ?? [];
+      print('[API] Found ${registrations.length} registrations');
+      return {'registrations': registrations};
+    }
+    print('[API] Error or no data: ${body['message']}');
+    return {'error': body['message'] ?? 'Failed to fetch registrations'};
+  }
+
+  Future<Map<String, dynamic>> approveRegistration(String id) async {
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/admin/pending-registrations/$id/approve'),
+      headers: _headers,
+    );
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> rejectRegistration(String id, {String? reason}) async {
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/admin/pending-registrations/$id/reject'),
+      headers: _headers,
+      body: jsonEncode({
+        if (reason != null) 'reason': reason,
+      }),
+    );
+    return jsonDecode(response.body);
   }
 }

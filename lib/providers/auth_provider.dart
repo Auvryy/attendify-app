@@ -131,11 +131,10 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<bool> completeRegistration({
-    required String password,
     required String firstName,
     required String lastName,
     required String phone,
-    required String barangayId,  // Changed to String for UUID
+    required String barangayId,
   }) async {
     if (_pendingEmail == null) {
       _errorMessage = 'Please complete email verification first';
@@ -149,14 +148,14 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _apiService.registerComplete(
         email: _pendingEmail!,
-        password: password,
         firstName: firstName,
         lastName: lastName,
         phone: phone,
         barangayId: barangayId,
       );
       
-      // Backend returns {success, data: {user, access_token, refresh_token}}
+      // Backend now returns success with pending status
+      // Registration is pending admin approval, user is NOT logged in
       if (response['success'] != true) {
         _errorMessage = response['message'] ?? 'Registration failed';
         _status = AuthStatus.unauthenticated;
@@ -164,12 +163,11 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
       
-      final data = response['data'];
-      if (data != null && data['user'] != null) {
-        _user = UserModel.fromJson(data['user']);
-      }
+      // Store the success message for the UI to display
+      // The message will say something like "Registration pending approval"
+      _errorMessage = response['message']; // This is actually a success message
       _pendingEmail = null;
-      _status = AuthStatus.authenticated;
+      _status = AuthStatus.unauthenticated; // User is NOT authenticated yet
       notifyListeners();
       return true;
     } catch (e) {

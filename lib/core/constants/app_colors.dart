@@ -29,6 +29,7 @@ class AppColors {
   
   // Additional UI Elements
   static const Color cardBackground = Color(0xFFFFFFFF);
+  static const Color surface = Color(0xFFFFFFFF); // Surface color for dialogs, cards
   static const Color divider = Color(0xFFEAEAEA);
   static const Color shadow = Color(0x1A000000); // 10% black opacity
   
