@@ -209,6 +209,7 @@ class _AdminLeaveRequestsScreenState extends State<AdminLeaveRequestsScreen> {
               requestId: request.id,
               status: request.status,
               attachmentUrl: request.attachmentUrl,
+              leaveType: request.leaveTypeName,
             ),
           ),
         );
@@ -249,12 +250,20 @@ class _AdminLeaveRequestsScreenState extends State<AdminLeaveRequestsScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    'Leave on ${request.formattedLeaveDate}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
+                  Row(
+                    children: [
+                      _buildLeaveTypeBadge(request.leaveType),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Leave on ${request.formattedLeaveDate}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -337,6 +346,62 @@ class _AdminLeaveRequestsScreenState extends State<AdminLeaveRequestsScreen> {
           fontWeight: FontWeight.w600,
           color: textColor,
         ),
+      ),
+    );
+  }
+
+  Widget _buildLeaveTypeBadge(String leaveType) {
+    Color backgroundColor;
+    Color textColor;
+    IconData icon;
+
+    switch (leaveType.toLowerCase()) {
+      case 'sick':
+        backgroundColor = Colors.red.shade50;
+        textColor = Colors.red.shade700;
+        icon = Icons.local_hospital;
+        break;
+      case 'vacation':
+        backgroundColor = Colors.blue.shade50;
+        textColor = Colors.blue.shade700;
+        icon = Icons.beach_access;
+        break;
+      case 'emergency':
+        backgroundColor = Colors.orange.shade50;
+        textColor = Colors.orange.shade700;
+        icon = Icons.warning_amber;
+        break;
+      case 'personal':
+        backgroundColor = Colors.purple.shade50;
+        textColor = Colors.purple.shade700;
+        icon = Icons.person;
+        break;
+      default:
+        backgroundColor = Colors.grey.shade100;
+        textColor = Colors.grey.shade700;
+        icon = Icons.event_note;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: textColor),
+          const SizedBox(width: 4),
+          Text(
+            leaveType.isEmpty ? 'Other' : leaveType[0].toUpperCase() + leaveType.substring(1),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: textColor,
+            ),
+          ),
+        ],
       ),
     );
   }

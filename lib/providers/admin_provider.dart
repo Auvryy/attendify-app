@@ -292,6 +292,7 @@ class AdminProvider with ChangeNotifier {
   Future<bool> reviewLeaveRequest({
     required String id,
     required String status, // 'approved' or 'declined'
+    String? adminNotes,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -301,6 +302,7 @@ class AdminProvider with ChangeNotifier {
       final response = await _apiService.reviewLeaveRequest(
         id: id,
         status: status,
+        adminNotes: adminNotes,
       );
 
       if (response['error'] != null) {

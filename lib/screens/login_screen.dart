@@ -23,6 +23,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _hasLoginError = false;
+  String? _loginErrorMessage;
 
   @override
   void dispose() {
@@ -32,6 +34,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    // Clear previous error state
+    setState(() {
+      _hasLoginError = false;
+      _loginErrorMessage = null;
+    });
+
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
@@ -55,16 +63,13 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         } else {
-          // Show error
+          // Show error with red border
+          setState(() {
+            _hasLoginError = true;
+            _loginErrorMessage = auth.errorMessage ?? 'Invalid email or password';
+          });
           print(
             '[LOGIN SCREEN] Login failed. Error message: ${auth.errorMessage}',
-          );
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(auth.errorMessage ?? 'Login failed'),
-              backgroundColor: AppColors.error,
-              duration: const Duration(seconds: 5),
-            ),
           );
         }
       }
@@ -130,11 +135,48 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                             const SizedBox(height: 35),
+                            // Error message display
+                            if (_hasLoginError && _loginErrorMessage != null) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.error),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _loginErrorMessage!,
+                                        style: const TextStyle(
+                                          color: AppColors.error,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             CustomTextField(
                               label: 'Email/ Username',
                               controller: _emailController,
                               prefixIcon: Icons.person_outline,
                               keyboardType: TextInputType.emailAddress,
+                              errorBorder: _hasLoginError,
+                              onChanged: (_) {
+                                if (_hasLoginError) {
+                                  setState(() {
+                                    _hasLoginError = false;
+                                    _loginErrorMessage = null;
+                                  });
+                                }
+                              },
                               validator: (value) =>
                                   value == null || value.isEmpty
                                   ? 'Please enter your email or username'
@@ -146,6 +188,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               controller: _passwordController,
                               prefixIcon: Icons.lock_outline,
                               obscureText: _obscurePassword,
+                              errorBorder: _hasLoginError,
+                              onChanged: (_) {
+                                if (_hasLoginError) {
+                                  setState(() {
+                                    _hasLoginError = false;
+                                    _loginErrorMessage = null;
+                                  });
+                                }
+                              },
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword

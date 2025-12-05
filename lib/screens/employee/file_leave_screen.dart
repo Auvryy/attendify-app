@@ -206,6 +206,46 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
       return;
     }
 
+    // Show confirmation dialog before submitting
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text('Confirm Leave Request'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Are you sure you want to submit this leave request?'),
+            const SizedBox(height: 16),
+            _buildConfirmationDetail('Leave Type:', _leaveTypes.firstWhere((t) => t['id'] == _selectedLeaveType)['name']!),
+            _buildConfirmationDetail('Date:', _dateController.text),
+            _buildConfirmationDetail('Reason:', _reasonController.text.trim()),
+            if (_selectedImage != null)
+              _buildConfirmationDetail('Attachment:', 'Photo attached'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.secondary,
+              foregroundColor: AppColors.white,
+            ),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     // If image is selected but not yet uploaded, upload it first
     if (_selectedImage != null && _uploadedImageUrl == null && !_isUploading) {
       await _uploadImage();
@@ -240,6 +280,37 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
         );
       }
     }
+  }
+
+  Widget _buildConfirmationDetail(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

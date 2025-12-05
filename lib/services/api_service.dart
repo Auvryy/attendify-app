@@ -548,6 +548,7 @@ class ApiService {
   Future<Map<String, dynamic>> reviewLeaveRequest({
     required String id,
     required String status,
+    String? adminNotes,
   }) async {
     // Use correct backend endpoint: PUT /api/leave/review/<id>
     final response = await http.put(
@@ -555,6 +556,7 @@ class ApiService {
       headers: _headers,
       body: jsonEncode({
         'status': status, // 'approved' or 'declined'
+        if (adminNotes != null) 'admin_notes': adminNotes,
       }),
     );
     final body = jsonDecode(response.body);
@@ -585,18 +587,28 @@ class ApiService {
 
   Future<Map<String, dynamic>> getNotifications({int page = 1, int limit = 20}) async {
     final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.notifications}?page=$page&limit=$limit'),
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.notifications}?limit=$limit'),
       headers: _headers,
     );
-    return jsonDecode(response.body);
+    print('[API] getNotifications response: ${response.body}');
+    final body = jsonDecode(response.body);
+    // Backend returns {success, data: {notifications: [...]}}
+    if (body['success'] == true && body['data'] != null) {
+      return body['data'];
+    }
+    return {'error': body['message'] ?? 'Failed to fetch notifications'};
   }
 
   Future<Map<String, dynamic>> markNotificationRead(String id) async {
     final response = await http.put(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.notificationMarkRead}/$id/read'),
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.notifications}/$id/read'),
       headers: _headers,
     );
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+    if (body['success'] == true) {
+      return body['data'] ?? {'success': true};
+    }
+    return {'error': body['message'] ?? 'Failed to mark notification as read'};
   }
 
   Future<Map<String, dynamic>> markAllNotificationsRead() async {
@@ -604,7 +616,11 @@ class ApiService {
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.notificationsMarkAllRead}'),
       headers: _headers,
     );
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+    if (body['success'] == true) {
+      return body['data'] ?? {'success': true};
+    }
+    return {'error': body['message'] ?? 'Failed to mark all notifications as read'};
   }
 
   // ==================== GENERAL ENDPOINTS ====================

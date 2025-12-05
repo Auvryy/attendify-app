@@ -11,6 +11,8 @@ class CustomTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
+  final bool errorBorder;
+  final void Function(String)? onChanged;
 
   const CustomTextField({
     super.key,
@@ -22,6 +24,8 @@ class CustomTextField extends StatelessWidget {
     this.validator,
     this.keyboardType,
     this.inputFormatters,
+    this.errorBorder = false,
+    this.onChanged,
   });
 
   @override
@@ -43,12 +47,13 @@ class CustomTextField extends StatelessWidget {
           obscureText: obscureText,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
+          onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
             fillColor: AppColors.white,
             prefixIcon: Icon(
               prefixIcon,
-              color: AppColors.textSecondary,
+              color: errorBorder ? AppColors.error : AppColors.textSecondary,
             ),
             suffixIcon: suffixIcon,
             border: OutlineInputBorder(
@@ -57,15 +62,15 @@ class CustomTextField extends StatelessWidget {
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: AppColors.divider,
-                width: 1,
+              borderSide: BorderSide(
+                color: errorBorder ? AppColors.error : AppColors.divider,
+                width: errorBorder ? 2 : 1,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: AppColors.secondary,
+              borderSide: BorderSide(
+                color: errorBorder ? AppColors.error : AppColors.secondary,
                 width: 2,
               ),
             ),

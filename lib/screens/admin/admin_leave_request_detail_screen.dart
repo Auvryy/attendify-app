@@ -12,6 +12,7 @@ class AdminLeaveRequestDetailScreen extends StatefulWidget {
   final String requestId;
   final String status;
   final String? attachmentUrl;
+  final String leaveType;
 
   const AdminLeaveRequestDetailScreen({
     super.key,
@@ -21,6 +22,7 @@ class AdminLeaveRequestDetailScreen extends StatefulWidget {
     required this.requestId,
     required this.status,
     this.attachmentUrl,
+    this.leaveType = 'Other',
   });
 
   @override
@@ -63,6 +65,11 @@ class _AdminLeaveRequestDetailScreenState extends State<AdminLeaveRequestDetailS
                         _buildStatusBadge(widget.status),
                       ],
                     ),
+
+                    const SizedBox(height: 16),
+
+                    // Leave Type Section
+                    _buildLeaveTypeBadge(widget.leaveType),
 
                     const SizedBox(height: 24),
 
@@ -353,6 +360,72 @@ class _AdminLeaveRequestDetailScreenState extends State<AdminLeaveRequestDetailS
     );
   }
 
+  Widget _buildLeaveTypeBadge(String leaveType) {
+    Color backgroundColor;
+    Color textColor;
+    IconData icon;
+    String displayText = leaveType;
+
+    switch (leaveType.toLowerCase()) {
+      case 'sick leave':
+      case 'sick':
+        backgroundColor = Colors.red.shade50;
+        textColor = Colors.red.shade700;
+        icon = Icons.local_hospital;
+        displayText = 'Sick Leave';
+        break;
+      case 'vacation leave':
+      case 'vacation':
+        backgroundColor = Colors.blue.shade50;
+        textColor = Colors.blue.shade700;
+        icon = Icons.beach_access;
+        displayText = 'Vacation Leave';
+        break;
+      case 'emergency leave':
+      case 'emergency':
+        backgroundColor = Colors.orange.shade50;
+        textColor = Colors.orange.shade700;
+        icon = Icons.warning_amber;
+        displayText = 'Emergency Leave';
+        break;
+      case 'personal leave':
+      case 'personal':
+        backgroundColor = Colors.purple.shade50;
+        textColor = Colors.purple.shade700;
+        icon = Icons.person;
+        displayText = 'Personal Leave';
+        break;
+      default:
+        backgroundColor = Colors.grey.shade100;
+        textColor = Colors.grey.shade700;
+        icon = Icons.event_note;
+        displayText = 'Other';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: textColor),
+          const SizedBox(width: 6),
+          Text(
+            displayText,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
@@ -397,13 +470,112 @@ class _AdminLeaveRequestDetailScreenState extends State<AdminLeaveRequestDetailS
     );
   }
 
+  void _showSuccessModal(BuildContext context, {
+    required String title,
+    required String message,
+    bool isSuccess = true,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: isSuccess ? AppColors.success.withOpacity(0.1) : AppColors.error.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isSuccess ? Icons.check_circle : Icons.cancel,
+                  color: isSuccess ? AppColors.success : AppColors.error,
+                  size: 50,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isSuccess ? AppColors.success : AppColors.error,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'Done',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _handleDecline(BuildContext context) {
+    final reasonController = TextEditingController();
+    
     showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Decline Request'),
-          content: const Text('Are you sure you want to decline this leave request?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Please provide a reason for declining this leave request:'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: reasonController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Enter reason for declining...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
+              ),
+            ],
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
@@ -411,23 +583,24 @@ class _AdminLeaveRequestDetailScreenState extends State<AdminLeaveRequestDetailS
             ),
             TextButton(
               onPressed: () async {
+                final reason = reasonController.text.trim();
                 Navigator.pop(dialogContext);
                 setState(() => _isProcessing = true);
                 
                 final success = await context.read<AdminProvider>().reviewLeaveRequest(
                   id: widget.requestId,
                   status: 'declined',
+                  adminNotes: reason.isNotEmpty ? reason : null,
                 );
                 
                 setState(() => _isProcessing = false);
                 
                 if (success && mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Leave request declined'),
-                      backgroundColor: AppColors.error,
-                    ),
+                  _showSuccessModal(
+                    context,
+                    title: 'Request Declined',
+                    message: 'The leave request has been declined successfully.',
+                    isSuccess: false,
                   );
                 } else if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -474,12 +647,11 @@ class _AdminLeaveRequestDetailScreenState extends State<AdminLeaveRequestDetailS
                 setState(() => _isProcessing = false);
                 
                 if (success && mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Leave request accepted'),
-                      backgroundColor: AppColors.success,
-                    ),
+                  _showSuccessModal(
+                    context,
+                    title: 'Request Approved',
+                    message: 'The leave request has been approved successfully.',
+                    isSuccess: true,
                   );
                 } else if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
