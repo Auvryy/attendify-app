@@ -454,4 +454,112 @@ class AdminProvider with ChangeNotifier {
       return false;
     }
   }
+
+  // ==================== PENDING REGISTRATIONS ====================
+
+  Future<bool> fetchPendingRegistrations({String? status}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiService.getPendingRegistrations(status: status);
+      
+      print('[ADMIN PROVIDER] Pending registrations response: $response');
+      
+      if (response['error'] != null) {
+        _errorMessage = response['error'];
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+      
+      final List<dynamic> records = response['registrations'] ?? [];
+      print('[ADMIN PROVIDER] Records count: ${records.length}');
+      _pendingRegistrations = records.map((r) => RegistrationRequestModel.fromJson(r)).toList();
+      print('[ADMIN PROVIDER] Parsed registrations: ${_pendingRegistrations.length}');
+      for (var reg in _pendingRegistrations) {
+        print('[ADMIN PROVIDER] Registration: ${reg.email}, status: ${reg.status}, isPending: ${reg.isPending}');
+      }
+      
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      print('[ADMIN PROVIDER] Error fetching pending: $e');
+      _errorMessage = 'Network error. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> approveRegistration(String id) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiService.approveRegistration(id);
+      
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to approve registration';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+      
+      // Remove from pending list
+      _pendingRegistrations.removeWhere((r) => r.id == id);
+      
+      // Update dashboard count
+      if (_dashboardData != null) {
+        _dashboardData!['pending_registrations'] = (_dashboardData!['pending_registrations'] ?? 1) - 1;
+        _dashboardData!['total_employees'] = (_dashboardData!['total_employees'] ?? 0) + 1;
+      }
+      
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Network error. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> rejectRegistration(String id, {String? reason}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiService.rejectRegistration(id, reason: reason);
+      
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to reject registration';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+      
+      // Remove from pending list
+      _pendingRegistrations.removeWhere((r) => r.id == id);
+      
+      // Update dashboard count
+      if (_dashboardData != null) {
+        _dashboardData!['pending_registrations'] = (_dashboardData!['pending_registrations'] ?? 1) - 1;
+      }
+      
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Network error. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 }
