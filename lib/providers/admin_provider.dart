@@ -79,28 +79,28 @@ class AdminProvider with ChangeNotifier {
         barangayId: barangayId,
       );
 
-      print('[ADMIN PROVIDER] fetchEmployees response: $response');
+      print('[ADMIN PROVIDER] fetchEmployees response: \$response');
 
       if (response['error'] != null) {
         _errorMessage = response['error'];
-        print('[ADMIN PROVIDER] fetchEmployees error: $_errorMessage');
+        print('[ADMIN PROVIDER] fetchEmployees error: \$_errorMessage');
         _isLoading = false;
         notifyListeners();
         return false;
       }
 
       final List<dynamic> records = response['employees'] ?? [];
-      print('[ADMIN PROVIDER] fetchEmployees records count: ${records.length}');
+      print('[ADMIN PROVIDER] fetchEmployees records count: \${records.length}');
       _employees = records.map((r) => UserModel.fromJson(r)).toList();
       print(
-        '[ADMIN PROVIDER] fetchEmployees parsed employees: ${_employees.length}',
+        '[ADMIN PROVIDER] fetchEmployees parsed employees: \${_employees.length}',
       );
 
       _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
-      print('[ADMIN PROVIDER] fetchEmployees exception: $e');
+      print('[ADMIN PROVIDER] fetchEmployees exception: \$e');
       _errorMessage = 'Network error. Please try again.';
       _isLoading = false;
       notifyListeners();
@@ -109,9 +109,6 @@ class AdminProvider with ChangeNotifier {
   }
 
   Future<UserModel?> getEmployeeDetail(String id) async {
-    // Don't call notifyListeners here to avoid setState during build
-    // This method returns data directly, caller handles its own state
-
     try {
       final response = await _apiService.getAdminEmployee(id);
 
@@ -142,7 +139,6 @@ class AdminProvider with ChangeNotifier {
         return false;
       }
 
-      // Update the employee in the list
       final index = _employees.indexWhere((e) => e.id == id);
       if (index != -1) {
         _employees[index] = _employees[index].copyWith(isActive: isActive);
@@ -190,7 +186,6 @@ class AdminProvider with ChangeNotifier {
         return false;
       }
 
-      // Refetch employee to get updated data
       await fetchEmployees();
 
       _isLoading = false;
@@ -225,9 +220,8 @@ class AdminProvider with ChangeNotifier {
       }
 
       final List<dynamic> records = response['attendance'] ?? [];
-      _attendanceRecords = records
-          .map((r) => AttendanceModel.fromJson(r))
-          .toList();
+      _attendanceRecords =
+          records.map((r) => AttendanceModel.fromJson(r)).toList();
 
       _isLoading = false;
       notifyListeners();
@@ -240,7 +234,6 @@ class AdminProvider with ChangeNotifier {
     }
   }
 
-  // Clear error
   void clearError() {
     _errorMessage = null;
     notifyListeners();
@@ -256,11 +249,11 @@ class AdminProvider with ChangeNotifier {
     try {
       final response = await _apiService.getAdminLeaveRequests(status: status);
 
-      print('[ADMIN PROVIDER] fetchLeaveRequests response: $response');
+      print('[ADMIN PROVIDER] fetchLeaveRequests response: \$response');
 
       if (response['error'] != null) {
         _errorMessage = response['error'];
-        print('[ADMIN PROVIDER] fetchLeaveRequests error: $_errorMessage');
+        print('[ADMIN PROVIDER] fetchLeaveRequests error: \$_errorMessage');
         _isLoading = false;
         notifyListeners();
         return false;
@@ -268,20 +261,19 @@ class AdminProvider with ChangeNotifier {
 
       final List<dynamic> records = response['leave_requests'] ?? [];
       print(
-        '[ADMIN PROVIDER] fetchLeaveRequests records count: ${records.length}',
+        '[ADMIN PROVIDER] fetchLeaveRequests records count: \${records.length}',
       );
-      _leaveRequests = records
-          .map((r) => LeaveRequestModel.fromJson(r))
-          .toList();
+      _leaveRequests =
+          records.map((r) => LeaveRequestModel.fromJson(r)).toList();
       print(
-        '[ADMIN PROVIDER] fetchLeaveRequests parsed: ${_leaveRequests.length}',
+        '[ADMIN PROVIDER] fetchLeaveRequests parsed: \${_leaveRequests.length}',
       );
 
       _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
-      print('[ADMIN PROVIDER] fetchLeaveRequests exception: $e');
+      print('[ADMIN PROVIDER] fetchLeaveRequests exception: \$e');
       _errorMessage = 'Network error. Please try again.';
       _isLoading = false;
       notifyListeners();
@@ -291,7 +283,7 @@ class AdminProvider with ChangeNotifier {
 
   Future<bool> reviewLeaveRequest({
     required String id,
-    required String status, // 'approved' or 'declined'
+    required String status,
     String? adminNotes,
   }) async {
     _isLoading = true;
@@ -312,7 +304,6 @@ class AdminProvider with ChangeNotifier {
         return false;
       }
 
-      // Remove the reviewed leave request from the list
       _leaveRequests.removeWhere((r) => r.id == id);
 
       _isLoading = false;
@@ -326,7 +317,6 @@ class AdminProvider with ChangeNotifier {
     }
   }
 
-  // Clear data
   void clear() {
     _dashboardData = null;
     _employees = [];
@@ -348,7 +338,7 @@ class AdminProvider with ChangeNotifier {
         status: status,
       );
 
-      print('[ADMIN PROVIDER] Pending registrations response: $response');
+      print('[ADMIN PROVIDER] Pending registrations response: \$response');
 
       if (response['error'] != null) {
         _errorMessage = response['error'];
@@ -358,16 +348,15 @@ class AdminProvider with ChangeNotifier {
       }
 
       final List<dynamic> records = response['registrations'] ?? [];
-      print('[ADMIN PROVIDER] Records count: ${records.length}');
-      _pendingRegistrations = records
-          .map((r) => RegistrationRequestModel.fromJson(r))
-          .toList();
+      print('[ADMIN PROVIDER] Records count: \${records.length}');
+      _pendingRegistrations =
+          records.map((r) => RegistrationRequestModel.fromJson(r)).toList();
       print(
-        '[ADMIN PROVIDER] Parsed registrations: ${_pendingRegistrations.length}',
+        '[ADMIN PROVIDER] Parsed registrations: \${_pendingRegistrations.length}',
       );
       for (var reg in _pendingRegistrations) {
         print(
-          '[ADMIN PROVIDER] Registration: ${reg.email}, status: ${reg.status}, isPending: ${reg.isPending}',
+          '[ADMIN PROVIDER] Registration: \${reg.email}, status: \${reg.status}, isPending: \${reg.isPending}',
         );
       }
 
@@ -375,7 +364,7 @@ class AdminProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print('[ADMIN PROVIDER] Error fetching pending: $e');
+      print('[ADMIN PROVIDER] Error fetching pending: \$e');
       _errorMessage = 'Network error. Please try again.';
       _isLoading = false;
       notifyListeners();
@@ -398,10 +387,8 @@ class AdminProvider with ChangeNotifier {
         return false;
       }
 
-      // Remove from pending list
       _pendingRegistrations.removeWhere((r) => r.id == id);
 
-      // Update dashboard count
       if (_dashboardData != null) {
         _dashboardData!['pending_registrations'] =
             (_dashboardData!['pending_registrations'] ?? 1) - 1;
@@ -435,10 +422,8 @@ class AdminProvider with ChangeNotifier {
         return false;
       }
 
-      // Remove from pending list
       _pendingRegistrations.removeWhere((r) => r.id == id);
 
-      // Update dashboard count
       if (_dashboardData != null) {
         _dashboardData!['pending_registrations'] =
             (_dashboardData!['pending_registrations'] ?? 1) - 1;
