@@ -208,6 +208,7 @@ class _AdminLeaveRequestsScreenState extends State<AdminLeaveRequestsScreen> {
               reason: request.reason,
               requestId: request.id,
               status: request.status,
+              attachmentUrl: request.attachmentUrl,
             ),
           ),
         );

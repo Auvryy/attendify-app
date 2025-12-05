@@ -11,6 +11,7 @@ class AdminLeaveRequestDetailScreen extends StatefulWidget {
   final String reason;
   final String requestId;
   final String status;
+  final String? attachmentUrl;
 
   const AdminLeaveRequestDetailScreen({
     super.key,
@@ -19,6 +20,7 @@ class AdminLeaveRequestDetailScreen extends StatefulWidget {
     required this.reason,
     required this.requestId,
     required this.status,
+    this.attachmentUrl,
   });
 
   @override
@@ -30,8 +32,6 @@ class _AdminLeaveRequestDetailScreenState extends State<AdminLeaveRequestDetailS
 
   @override
   Widget build(BuildContext context) {
-    final isPending = widget.status == 'pending';
-    
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -141,37 +141,100 @@ class _AdminLeaveRequestDetailScreenState extends State<AdminLeaveRequestDetailS
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      height: 150,
-                      decoration: BoxDecoration(
-                        color: AppColors.divider,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
+                    GestureDetector(
+                      onTap: widget.attachmentUrl != null ? () => _showFullImage(context) : null,
+                      child: Container(
+                        width: double.infinity,
+                        height: 200,
+                        decoration: BoxDecoration(
                           color: AppColors.divider,
-                          width: 1,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.divider,
+                            width: 1,
+                          ),
                         ),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.asset(
-                          'assets/images/attachment-placeholder.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: AppColors.divider,
-                              child: const Center(
-                                child: Icon(
-                                  Icons.image_outlined,
-                                  color: AppColors.textSecondary,
-                                  size: 50,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: widget.attachmentUrl != null
+                              ? Image.network(
+                                  widget.attachmentUrl!,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Center(
+                                      child: CircularProgressIndicator(
+                                        value: loadingProgress.expectedTotalBytes != null
+                                            ? loadingProgress.cumulativeBytesLoaded /
+                                                loadingProgress.expectedTotalBytes!
+                                            : null,
+                                      ),
+                                    );
+                                  },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: AppColors.divider,
+                                      child: const Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.broken_image_outlined,
+                                              color: AppColors.textSecondary,
+                                              size: 50,
+                                            ),
+                                            SizedBox(height: 8),
+                                            Text(
+                                              'Failed to load image',
+                                              style: TextStyle(
+                                                color: AppColors.textSecondary,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                )
+                              : Container(
+                                  color: AppColors.divider,
+                                  child: const Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.image_not_supported_outlined,
+                                          color: AppColors.textSecondary,
+                                          size: 50,
+                                        ),
+                                        SizedBox(height: 8),
+                                        Text(
+                                          'No attachment',
+                                          style: TextStyle(
+                                            color: AppColors.textSecondary,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
                         ),
                       ),
                     ),
+                    if (widget.attachmentUrl != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Tap image to view full size',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
 
                     const SizedBox(height: 40),
 
@@ -435,6 +498,54 @@ class _AdminLeaveRequestDetailScreenState extends State<AdminLeaveRequestDetailS
           ],
         );
       },
+    );
+  }
+
+  void _showFullImage(BuildContext context) {
+    if (widget.attachmentUrl == null) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.5,
+              maxScale: 4,
+              child: Image.network(
+                widget.attachmentUrl!,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    padding: const EdgeInsets.all(20),
+                    color: Colors.white,
+                    child: const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.broken_image, size: 60, color: Colors.grey),
+                        SizedBox(height: 10),
+                        Text('Failed to load image'),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

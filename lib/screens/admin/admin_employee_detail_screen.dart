@@ -109,12 +109,18 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
   }
 
   void _showEditDialog(UserModel employee) {
+    final firstNameController = TextEditingController(text: employee.firstName);
+    final lastNameController = TextEditingController(text: employee.lastName);
+    final middleNameController = TextEditingController(
+      text: employee.middleName,
+    );
     final positionController = TextEditingController(
       text: employee.position ?? '',
     );
     final addressController = TextEditingController(
       text: employee.fullAddress ?? '',
     );
+    final phoneController = TextEditingController(text: employee.phone);
 
     showDialog(
       context: context,
@@ -125,15 +131,39 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                employee.fullName,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+              TextField(
+                controller: firstNameController,
+                decoration: const InputDecoration(
+                  labelText: 'First Name *',
+                  border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
+              TextField(
+                controller: lastNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Last Name *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: middleNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Middle Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: positionController,
                 decoration: const InputDecoration(
@@ -142,7 +172,7 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               TextField(
                 controller: addressController,
                 maxLines: 2,
@@ -162,6 +192,18 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
           ),
           TextButton(
             onPressed: () async {
+              // Validate required fields
+              if (firstNameController.text.trim().isEmpty ||
+                  lastNameController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('First name and last name are required'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+
               Navigator.pop(dialogContext);
 
               setState(() => _isLoading = true);
@@ -169,6 +211,14 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
               final adminProvider = context.read<AdminProvider>();
               final success = await adminProvider.updateEmployee(
                 id: employee.id,
+                firstName: firstNameController.text.trim(),
+                lastName: lastNameController.text.trim(),
+                middleName: middleNameController.text.trim().isNotEmpty
+                    ? middleNameController.text.trim()
+                    : null,
+                phone: phoneController.text.trim().isNotEmpty
+                    ? phoneController.text.trim()
+                    : null,
                 position: positionController.text.trim().isNotEmpty
                     ? positionController.text.trim()
                     : null,

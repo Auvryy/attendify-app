@@ -490,15 +490,23 @@ class ApiService {
 
   Future<Map<String, dynamic>> updateEmployee({
     required String id,
+    String? firstName,
+    String? lastName,
+    String? middleName,
     String? position,
     String? fullAddress,
+    String? phone,
   }) async {
     final response = await http.put(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.adminEmployees}/$id'),
       headers: _headers,
       body: jsonEncode({
+        if (firstName != null) 'first_name': firstName,
+        if (lastName != null) 'last_name': lastName,
+        if (middleName != null) 'middle_name': middleName,
         if (position != null) 'position': position,
         if (fullAddress != null) 'full_address': fullAddress,
+        if (phone != null) 'phone': phone,
       }),
     );
     final body = jsonDecode(response.body);
@@ -514,10 +522,21 @@ class ApiService {
     if (status != null) {
       url += '?status=$status';
     }
+    print('[API] getAdminLeaveRequests url: $url');
+    
     final response = await http.get(
       Uri.parse(url),
       headers: _headers,
     );
+    
+    print('[API] getAdminLeaveRequests status: ${response.statusCode}');
+    print('[API] getAdminLeaveRequests body: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
+    
+    // Check if response is HTML (error page)
+    if (response.body.startsWith('<!') || response.body.startsWith('<html')) {
+      return {'error': 'Server returned HTML instead of JSON. Check if backend is running.'};
+    }
+    
     final body = jsonDecode(response.body);
     // Backend returns {success, data: {leave_requests: [...]}}
     if (body['success'] == true && body['data'] != null) {
