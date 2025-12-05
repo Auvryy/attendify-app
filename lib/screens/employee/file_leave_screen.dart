@@ -28,6 +28,15 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
   bool _isLoading = false;
   bool _isUploading = false;
   DateTime? _selectedDate;
+  String _selectedLeaveType = 'other';
+  
+  final List<Map<String, String>> _leaveTypes = [
+    {'id': 'sick', 'name': 'Sick Leave'},
+    {'id': 'vacation', 'name': 'Vacation Leave'},
+    {'id': 'emergency', 'name': 'Emergency Leave'},
+    {'id': 'personal', 'name': 'Personal Leave'},
+    {'id': 'other', 'name': 'Other'},
+  ];
 
   @override
   void dispose() {
@@ -197,6 +206,46 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
       return;
     }
 
+    // Show confirmation dialog before submitting
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text('Confirm Leave Request'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Are you sure you want to submit this leave request?'),
+            const SizedBox(height: 16),
+            _buildConfirmationDetail('Leave Type:', _leaveTypes.firstWhere((t) => t['id'] == _selectedLeaveType)['name']!),
+            _buildConfirmationDetail('Date:', _dateController.text),
+            _buildConfirmationDetail('Reason:', _reasonController.text.trim()),
+            if (_selectedImage != null)
+              _buildConfirmationDetail('Attachment:', 'Photo attached'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.secondary,
+              foregroundColor: AppColors.white,
+            ),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     // If image is selected but not yet uploaded, upload it first
     if (_selectedImage != null && _uploadedImageUrl == null && !_isUploading) {
       await _uploadImage();
@@ -208,6 +257,7 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
     final success = await leaveProvider.fileLeaveRequest(
       leaveDate: DateFormat('yyyy-MM-dd').format(_selectedDate!),
       reason: _reasonController.text.trim(),
+      leaveType: _selectedLeaveType,
       attachmentUrl: _uploadedImageUrl,
     );
 
@@ -232,6 +282,37 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
     }
   }
 
+  Widget _buildConfirmationDetail(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -249,6 +330,20 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Leave Type Field
+                    const Text(
+                      'Leave Type',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildLeaveTypeDropdown(),
+
+                    const SizedBox(height: 24),
+
                     // Date Field
                     const Text(
                       'Date of the desired leave',
@@ -334,6 +429,46 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLeaveTypeDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppColors.divider,
+          width: 1,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedLeaveType,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary),
+          items: _leaveTypes.map((type) {
+            return DropdownMenuItem<String>(
+              value: type['id'],
+              child: Text(
+                type['name']!,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              setState(() {
+                _selectedLeaveType = value;
+              });
+            }
+          },
+        ),
       ),
     );
   }

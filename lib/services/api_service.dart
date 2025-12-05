@@ -178,11 +178,11 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  Future<Map<String, dynamic>> resetPassword(String resetToken, String newPassword) async {
+  Future<Map<String, dynamic>> resetPassword(String email, String newPassword) async {
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.resetPassword}'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'reset_token': resetToken, 'new_password': newPassword}),
+      body: jsonEncode({'email': email, 'new_password': newPassword}),
     );
     return jsonDecode(response.body);
   }
@@ -377,6 +377,7 @@ class ApiService {
   Future<Map<String, dynamic>> fileLeaveRequest({
     required String leaveDate,
     required String reason,
+    String? leaveType,
     String? attachmentUrl,
   }) async {
     final response = await http.post(
@@ -385,26 +386,41 @@ class ApiService {
       body: jsonEncode({
         'leave_date': leaveDate,
         'reason': reason,
+        if (leaveType != null) 'leave_type': leaveType,
         if (attachmentUrl != null) 'attachment_url': attachmentUrl,
       }),
     );
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+    if (body['success'] == true) {
+      return body['data'] ?? {'success': true};
+    }
+    return {'error': body['message'] ?? 'Failed to submit leave request'};
   }
 
   Future<Map<String, dynamic>> getLeaveHistory({int page = 1, int limit = 20}) async {
+    // Use correct backend endpoint: /api/leave/my-requests
     final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.leaveHistory}?page=$page&limit=$limit'),
+      Uri.parse('${ApiConstants.baseUrl}/leave/my-requests'),
       headers: _headers,
     );
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+    if (body['success'] == true && body['data'] != null) {
+      return body['data'];
+    }
+    return {'error': body['message'] ?? 'Failed to fetch leave history'};
   }
 
   Future<Map<String, dynamic>> getLeaveDetail(String id) async {
+    // Use correct backend endpoint: /api/leave/request/<id>
     final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.leaveDetail}/$id'),
+      Uri.parse('${ApiConstants.baseUrl}/leave/request/$id'),
       headers: _headers,
     );
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+    if (body['success'] == true && body['data'] != null) {
+      return body['data'];
+    }
+    return {'error': body['message'] ?? 'Failed to fetch leave detail'};
   }
 
   // ==================== ADMIN ENDPOINTS ====================
@@ -427,56 +443,127 @@ class ApiService {
     if (barangayId != null) {
       url += '?barangay_id=$barangayId';
     }
+    print('[API] getAdminEmployees url: $url');
+    print('[API] getAdminEmployees headers: $_headers');
+    
     final response = await http.get(
       Uri.parse(url),
       headers: _headers,
     );
-    return jsonDecode(response.body);
+    
+    print('[API] getAdminEmployees status: ${response.statusCode}');
+    print('[API] getAdminEmployees body: ${response.body}');
+    
+    final body = jsonDecode(response.body);
+    // Backend returns {success, data: {employees: [...]}}
+    if (body['success'] == true && body['data'] != null) {
+      return body['data'];
+    }
+    return {'error': body['message'] ?? 'Failed to fetch employees'};
   }
 
   Future<Map<String, dynamic>> getAdminEmployee(String id) async {
     final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.adminEmployee}/$id'),
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.adminEmployees}/$id'),
       headers: _headers,
     );
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+    // Backend returns {success, data: {employee: {...}}}
+    if (body['success'] == true && body['data'] != null) {
+      return body['data'];
+    }
+    return {'error': body['message'] ?? 'Failed to fetch employee'};
   }
 
   Future<Map<String, dynamic>> updateEmployeeStatus(String id, bool isActive) async {
-    final response = await http.put(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.adminEmployee}/$id/status'),
+    final endpoint = isActive ? 'activate' : 'deactivate';
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.adminEmployees}/$id/$endpoint'),
       headers: _headers,
-      body: jsonEncode({'is_active': isActive}),
     );
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+    if (body['success'] == true) {
+      return body['data'] ?? {'success': true};
+    }
+    return {'error': body['message'] ?? 'Failed to update employee status'};
+  }
+
+  Future<Map<String, dynamic>> updateEmployee({
+    required String id,
+    String? firstName,
+    String? lastName,
+    String? middleName,
+    String? position,
+    String? fullAddress,
+    String? phone,
+  }) async {
+    final response = await http.put(
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.adminEmployees}/$id'),
+      headers: _headers,
+      body: jsonEncode({
+        if (firstName != null) 'first_name': firstName,
+        if (lastName != null) 'last_name': lastName,
+        if (middleName != null) 'middle_name': middleName,
+        if (position != null) 'position': position,
+        if (fullAddress != null) 'full_address': fullAddress,
+        if (phone != null) 'phone': phone,
+      }),
+    );
+    final body = jsonDecode(response.body);
+    if (body['success'] == true) {
+      return body['data'] ?? {'success': true};
+    }
+    return {'error': body['message'] ?? 'Failed to update employee'};
   }
 
   Future<Map<String, dynamic>> getAdminLeaveRequests({String? status}) async {
-    String url = '${ApiConstants.baseUrl}${ApiConstants.adminLeaveRequests}';
+    // Use correct backend endpoint: /api/leave/all
+    String url = '${ApiConstants.baseUrl}/leave/all';
     if (status != null) {
       url += '?status=$status';
     }
+    print('[API] getAdminLeaveRequests url: $url');
+    
     final response = await http.get(
       Uri.parse(url),
       headers: _headers,
     );
-    return jsonDecode(response.body);
+    
+    print('[API] getAdminLeaveRequests status: ${response.statusCode}');
+    print('[API] getAdminLeaveRequests body: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
+    
+    // Check if response is HTML (error page)
+    if (response.body.startsWith('<!') || response.body.startsWith('<html')) {
+      return {'error': 'Server returned HTML instead of JSON. Check if backend is running.'};
+    }
+    
+    final body = jsonDecode(response.body);
+    // Backend returns {success, data: {leave_requests: [...]}}
+    if (body['success'] == true && body['data'] != null) {
+      return body['data'];
+    }
+    return {'error': body['message'] ?? 'Failed to fetch leave requests'};
   }
 
   Future<Map<String, dynamic>> reviewLeaveRequest({
     required String id,
-    required String action,
+    required String status,
     String? adminNotes,
   }) async {
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.leaveReview}/$id/review'),
+    // Use correct backend endpoint: PUT /api/leave/review/<id>
+    final response = await http.put(
+      Uri.parse('${ApiConstants.baseUrl}/leave/review/$id'),
       headers: _headers,
       body: jsonEncode({
-        'action': action,
+        'status': status, // 'approved' or 'declined'
         if (adminNotes != null) 'admin_notes': adminNotes,
       }),
     );
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+    if (body['success'] == true) {
+      return body['data'] ?? {'success': true};
+    }
+    return {'error': body['message'] ?? 'Failed to review leave request'};
   }
 
   Future<Map<String, dynamic>> getAdminAttendance({
@@ -500,18 +587,28 @@ class ApiService {
 
   Future<Map<String, dynamic>> getNotifications({int page = 1, int limit = 20}) async {
     final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.notifications}?page=$page&limit=$limit'),
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.notifications}?limit=$limit'),
       headers: _headers,
     );
-    return jsonDecode(response.body);
+    print('[API] getNotifications response: ${response.body}');
+    final body = jsonDecode(response.body);
+    // Backend returns {success, data: {notifications: [...]}}
+    if (body['success'] == true && body['data'] != null) {
+      return body['data'];
+    }
+    return {'error': body['message'] ?? 'Failed to fetch notifications'};
   }
 
   Future<Map<String, dynamic>> markNotificationRead(String id) async {
     final response = await http.put(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.notificationMarkRead}/$id/read'),
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.notifications}/$id/read'),
       headers: _headers,
     );
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+    if (body['success'] == true) {
+      return body['data'] ?? {'success': true};
+    }
+    return {'error': body['message'] ?? 'Failed to mark notification as read'};
   }
 
   Future<Map<String, dynamic>> markAllNotificationsRead() async {
@@ -519,7 +616,11 @@ class ApiService {
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.notificationsMarkAllRead}'),
       headers: _headers,
     );
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+    if (body['success'] == true) {
+      return body['data'] ?? {'success': true};
+    }
+    return {'error': body['message'] ?? 'Failed to mark all notifications as read'};
   }
 
   // ==================== GENERAL ENDPOINTS ====================

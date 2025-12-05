@@ -5,20 +5,17 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/admin_provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../models/user_model.dart';
 import '../../models/attendance_model.dart';
 
 class AdminEmployeeDetailScreen extends StatefulWidget {
   final String employeeId;
 
-  const AdminEmployeeDetailScreen({
-    super.key,
-    required this.employeeId,
-  });
+  const AdminEmployeeDetailScreen({super.key, required this.employeeId});
 
   @override
-  State<AdminEmployeeDetailScreen> createState() => _AdminEmployeeDetailScreenState();
+  State<AdminEmployeeDetailScreen> createState() =>
+      _AdminEmployeeDetailScreenState();
 }
 
 class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
@@ -29,18 +26,21 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _loadEmployeeData();
+    // Defer loading to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadEmployeeData();
+    });
   }
 
   Future<void> _loadEmployeeData() async {
     final adminProvider = context.read<AdminProvider>();
-    
+
     // Fetch employee details
     final employee = await adminProvider.getEmployeeDetail(widget.employeeId);
-    
+
     // Fetch attendance for this employee (we'll filter from overall attendance)
     await adminProvider.fetchAttendance();
-    
+
     if (mounted) {
       setState(() {
         _employee = employee;
@@ -58,7 +58,9 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Employee'),
-        content: Text('Are you sure you want to deactivate ${_employee?.fullName ?? 'this employee'}?'),
+        content: Text(
+          'Are you sure you want to deactivate ${_employee?.fullName ?? 'this employee'}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -75,10 +77,13 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
 
     if (confirmed == true && _employee != null) {
       setState(() => _isLoading = true);
-      
+
       final adminProvider = context.read<AdminProvider>();
-      final success = await adminProvider.updateEmployeeStatus(_employee!.id, false);
-      
+      final success = await adminProvider.updateEmployeeStatus(
+        _employee!.id,
+        false,
+      );
+
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -92,7 +97,9 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
           setState(() => _isLoading = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(adminProvider.errorMessage ?? 'Failed to deactivate employee'),
+              content: Text(
+                adminProvider.errorMessage ?? 'Failed to deactivate employee',
+              ),
               backgroundColor: AppColors.error,
             ),
           );
@@ -101,21 +108,166 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
     }
   }
 
+  void _showEditDialog(UserModel employee) {
+    final firstNameController = TextEditingController(text: employee.firstName);
+    final lastNameController = TextEditingController(text: employee.lastName);
+    final middleNameController = TextEditingController(
+      text: employee.middleName,
+    );
+    final positionController = TextEditingController(
+      text: employee.position ?? '',
+    );
+    final addressController = TextEditingController(
+      text: employee.fullAddress ?? '',
+    );
+    final phoneController = TextEditingController(text: employee.phone);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit Employee'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: firstNameController,
+                decoration: const InputDecoration(
+                  labelText: 'First Name *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: lastNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Last Name *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: middleNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Middle Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: positionController,
+                decoration: const InputDecoration(
+                  labelText: 'Position',
+                  hintText: 'e.g. Barangay Secretary',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: addressController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Full Address',
+                  hintText: 'Enter full address',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              // Validate required fields
+              if (firstNameController.text.trim().isEmpty ||
+                  lastNameController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('First name and last name are required'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+
+              Navigator.pop(dialogContext);
+
+              setState(() => _isLoading = true);
+
+              final adminProvider = context.read<AdminProvider>();
+              final success = await adminProvider.updateEmployee(
+                id: employee.id,
+                firstName: firstNameController.text.trim(),
+                lastName: lastNameController.text.trim(),
+                middleName: middleNameController.text.trim().isNotEmpty
+                    ? middleNameController.text.trim()
+                    : null,
+                phone: phoneController.text.trim().isNotEmpty
+                    ? phoneController.text.trim()
+                    : null,
+                position: positionController.text.trim().isNotEmpty
+                    ? positionController.text.trim()
+                    : null,
+                fullAddress: addressController.text.trim().isNotEmpty
+                    ? addressController.text.trim()
+                    : null,
+              );
+
+              if (mounted) {
+                if (success) {
+                  // Refresh employee data
+                  await _loadEmployeeData();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Employee updated successfully'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                } else {
+                  setState(() => _isLoading = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        adminProvider.errorMessage ??
+                            'Failed to update employee',
+                      ),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
-    final adminUser = authProvider.user;
-
     if (_isLoading) {
       return Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context, adminUser?.profileImageUrl),
-              const Expanded(
-                child: Center(child: CircularProgressIndicator()),
-              ),
+              _buildHeader(context),
+              const Expanded(child: Center(child: CircularProgressIndicator())),
             ],
           ),
         ),
@@ -128,7 +280,7 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context, adminUser?.profileImageUrl),
+              _buildHeader(context),
               const Expanded(
                 child: Center(
                   child: Text(
@@ -146,12 +298,12 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
     // Separate today's attendance from previous
     final now = DateTime.now();
     final today = DateFormat('yyyy-MM-dd').format(now);
-    final todayAttendance = _attendanceHistory.where((a) => 
-      DateFormat('yyyy-MM-dd').format(a.date) == today
-    ).toList();
-    final previousAttendance = _attendanceHistory.where((a) => 
-      DateFormat('yyyy-MM-dd').format(a.date) != today
-    ).toList();
+    final todayAttendance = _attendanceHistory
+        .where((a) => DateFormat('yyyy-MM-dd').format(a.date) == today)
+        .toList();
+    final previousAttendance = _attendanceHistory
+        .where((a) => DateFormat('yyyy-MM-dd').format(a.date) != today)
+        .toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -159,7 +311,7 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
         child: Column(
           children: [
             // Header
-            _buildHeader(context, adminUser?.profileImageUrl),
+            _buildHeader(context),
 
             // Content
             Expanded(
@@ -194,10 +346,12 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      ...todayAttendance.map((record) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _buildAttendanceCard(record),
-                      )),
+                      ...todayAttendance.map(
+                        (record) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _buildAttendanceCard(record),
+                        ),
+                      ),
                       const SizedBox(height: 20),
                     ],
 
@@ -211,10 +365,14 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      ...previousAttendance.take(10).map((record) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _buildAttendanceCard(record),
-                      )),
+                      ...previousAttendance
+                          .take(10)
+                          .map(
+                            (record) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _buildAttendanceCard(record),
+                            ),
+                          ),
                     ],
 
                     if (todayAttendance.isEmpty && previousAttendance.isEmpty)
@@ -223,9 +381,7 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                         child: const Center(
                           child: Text(
                             'No attendance records found',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                            ),
+                            style: TextStyle(color: AppColors.textSecondary),
                           ),
                         ),
                       ),
@@ -239,7 +395,7 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, String? profileImageUrl) {
+  Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       decoration: BoxDecoration(
@@ -278,44 +434,7 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
               color: AppColors.accent,
             ),
           ),
-
-          const Spacer(),
-
-          // Profile Avatar
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.accent,
-                width: 2,
-              ),
-            ),
-            child: ClipOval(
-              child: profileImageUrl != null && profileImageUrl.isNotEmpty
-                  ? Image.network(
-                      profileImageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return _buildDefaultAvatar();
-                      },
-                    )
-                  : _buildDefaultAvatar(),
-            ),
-          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildDefaultAvatar() {
-    return Container(
-      color: AppColors.accent,
-      child: const Icon(
-        Icons.person,
-        color: AppColors.white,
-        size: 24,
       ),
     );
   }
@@ -348,7 +467,9 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                   color: AppColors.divider,
                 ),
                 child: ClipOval(
-                  child: employee.profileImageUrl != null && employee.profileImageUrl!.isNotEmpty
+                  child:
+                      employee.profileImageUrl != null &&
+                          employee.profileImageUrl!.isNotEmpty
                       ? Image.network(
                           employee.profileImageUrl!,
                           fit: BoxFit.cover,
@@ -392,6 +513,14 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                   ],
                 ),
               ),
+              // Edit button
+              IconButton(
+                onPressed: () => _showEditDialog(_employee!),
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  color: AppColors.secondary,
+                ),
+              ),
               // Delete button
               IconButton(
                 onPressed: _handleDeleteEmployee,
@@ -425,10 +554,7 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
             value: employee.phone.isNotEmpty ? employee.phone : 'Not set',
           ),
           const SizedBox(height: 12),
-          _buildSingleInfoRow(
-            label: 'Email Address',
-            value: employee.email,
-          ),
+          _buildSingleInfoRow(label: 'Email Address', value: employee.email),
           const SizedBox(height: 12),
           _buildSingleInfoRow(
             label: 'Employee ID',
@@ -458,26 +584,17 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
     );
   }
 
-  Widget _buildSingleInfoRow({
-    required String label,
-    required String value,
-  }) {
+  Widget _buildSingleInfoRow({required String label, required String value}) {
     return _buildInfoField(label: label, value: value);
   }
 
-  Widget _buildInfoField({
-    required String label,
-    required String value,
-  }) {
+  Widget _buildInfoField({required String label, required String value}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: AppColors.divider,
-          width: 1,
-        ),
+        border: Border.all(color: AppColors.divider, width: 1),
       ),
       child: Row(
         children: [
@@ -516,13 +633,13 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
 
   Widget _buildAttendanceCard(AttendanceModel record) {
     final dateStr = DateFormat('MMMM d, yyyy').format(record.date);
-    final timeInStr = record.timeIn != null 
-        ? DateFormat('h:mm a').format(record.timeIn!) 
+    final timeInStr = record.timeIn != null
+        ? DateFormat('h:mm a').format(record.timeIn!)
         : 'N/A';
-    final timeOutStr = record.timeOut != null 
-        ? DateFormat('h:mm a').format(record.timeOut!) 
+    final timeOutStr = record.timeOut != null
+        ? DateFormat('h:mm a').format(record.timeOut!)
         : 'N/A';
-    
+
     // Determine status display
     String statusText;
     Color statusColor;
@@ -612,10 +729,7 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 10,
-            color: AppColors.textSecondary,
-          ),
+          style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
         ),
         Text(
           value,

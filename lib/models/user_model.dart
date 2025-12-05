@@ -12,6 +12,7 @@ class UserModel {
   final String barangayId;  // UUID string
   final String? barangayName;
   final String? position;
+  final String? fullAddress;
   final String? profileImageUrl;
   final String? qrCode;
   final bool isActive;
@@ -29,6 +30,7 @@ class UserModel {
     required this.barangayId,
     this.barangayName,
     this.position,
+    this.fullAddress,
     this.profileImageUrl,
     this.qrCode,
     this.isActive = true,
@@ -51,6 +53,7 @@ class UserModel {
       barangayId: json['barangay_id']?.toString() ?? '',
       barangayName: json['barangay_name'] ?? json['barangays']?['name'] ?? json['barangay']?['name'],
       position: json['position'],
+      fullAddress: json['full_address'],
       profileImageUrl: json['profile_image_url'],
       qrCode: json['qr_code'],
       isActive: json['is_active'] ?? true,
@@ -73,6 +76,7 @@ class UserModel {
       'barangay_id': barangayId,
       'barangay_name': barangayName,
       'position': position,
+      'full_address': fullAddress,
       'profile_image_url': profileImageUrl,
       'qr_code': qrCode,
       'is_active': isActive,
@@ -95,6 +99,7 @@ class UserModel {
     String? barangayId,
     String? barangayName,
     String? position,
+    String? fullAddress,
     String? profileImageUrl,
     String? qrCode,
     bool? isActive,
@@ -112,6 +117,7 @@ class UserModel {
       barangayId: barangayId ?? this.barangayId,
       barangayName: barangayName ?? this.barangayName,
       position: position ?? this.position,
+      fullAddress: fullAddress ?? this.fullAddress,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       qrCode: qrCode ?? this.qrCode,
       isActive: isActive ?? this.isActive,

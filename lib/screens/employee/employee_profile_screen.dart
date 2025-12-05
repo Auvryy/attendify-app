@@ -7,6 +7,7 @@ import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/api_service.dart';
+import '../login_screen.dart';
 import 'account_security_screen.dart';
 import 'notification_settings_screen.dart';
 import 'about_us_screen.dart';
@@ -62,7 +63,7 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
 
       if (pickedFile != null) {
         setState(() => _isUploadingPhoto = true);
-        
+
         // Upload the image
         final response = await _apiService.uploadFile(
           pickedFile.path,
@@ -71,7 +72,7 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
 
         if (response['success'] == true && response['data']?['url'] != null) {
           final imageUrl = response['data']['url'];
-          
+
           // Update profile with new image URL
           final userProvider = context.read<UserProvider>();
           final updatedUser = await userProvider.updateProfile(
@@ -81,7 +82,7 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
           if (updatedUser != null && mounted) {
             // Update auth provider's user
             context.read<AuthProvider>().updateUser(updatedUser);
-            
+
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Profile photo updated successfully'),
@@ -99,7 +100,7 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
             );
           }
         }
-        
+
         if (mounted) {
           setState(() => _isUploadingPhoto = false);
         }
@@ -121,7 +122,7 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final user = auth.user;
-    
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -140,7 +141,9 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
 
                     // Profile Avatar with upload button
                     GestureDetector(
-                      onTap: _isUploadingPhoto ? null : _pickAndUploadProfileImage,
+                      onTap: _isUploadingPhoto
+                          ? null
+                          : _pickAndUploadProfileImage,
                       child: Stack(
                         children: [
                           Container(
@@ -154,28 +157,31 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
                                 ? const Center(
                                     child: CircularProgressIndicator(
                                       strokeWidth: 3,
-                                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppColors.secondary,
+                                      ),
                                     ),
                                   )
-                                : user?.profileImageUrl != null && user!.profileImageUrl!.isNotEmpty
-                                    ? ClipOval(
-                                        child: Image.network(
-                                          user.profileImageUrl!,
-                                          fit: BoxFit.cover,
-                                          width: 120,
-                                          height: 120,
-                                          errorBuilder: (_, __, ___) => const Icon(
-                                            Icons.person,
-                                            color: AppColors.white,
-                                            size: 60,
-                                          ),
-                                        ),
-                                      )
-                                    : const Icon(
+                                : user?.profileImageUrl != null &&
+                                      user!.profileImageUrl!.isNotEmpty
+                                ? ClipOval(
+                                    child: Image.network(
+                                      user.profileImageUrl!,
+                                      fit: BoxFit.cover,
+                                      width: 120,
+                                      height: 120,
+                                      errorBuilder: (_, __, ___) => const Icon(
                                         Icons.person,
                                         color: AppColors.white,
                                         size: 60,
                                       ),
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.person,
+                                    color: AppColors.white,
+                                    size: 60,
+                                  ),
                           ),
                           // Camera icon overlay
                           Positioned(
@@ -259,7 +265,8 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const NotificationSettingsScreen(),
+                            builder: (context) =>
+                                const NotificationSettingsScreen(),
                           ),
                         );
                       },
@@ -369,18 +376,6 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
               letterSpacing: 1,
             ),
           ),
-          const Spacer(),
-
-          // Profile Avatar
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.accent,
-            ),
-            child: const Icon(Icons.person, color: AppColors.white, size: 24),
-          ),
         ],
       ),
     );
@@ -458,6 +453,13 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
               onPressed: () async {
                 Navigator.of(dialogContext).pop();
                 await context.read<AuthProvider>().logout();
+                // Navigate to login and clear all routes
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
               },
               child: const Text(
                 'Log out',

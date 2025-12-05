@@ -6,6 +6,7 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/logo_widget.dart';
 import '../../providers/auth_provider.dart';
 import '../screens/signup_screen.dart';
+import '../screens/forgot_password_screen.dart';
 import 'admin/admin_main_layout.dart';
 import 'employee/employee_main_layout.dart';
 
@@ -22,6 +23,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _hasLoginError = false;
+  String? _loginErrorMessage;
 
   @override
   void dispose() {
@@ -31,37 +34,42 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    // Clear previous error state
+    setState(() {
+      _hasLoginError = false;
+      _loginErrorMessage = null;
+    });
+
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      
+
       final auth = context.read<AuthProvider>();
       final success = await auth.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
-      
+
       if (mounted) {
         setState(() => _isLoading = false);
-        
+
         if (success) {
           // Navigate based on role
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => auth.isAdmin 
-                ? const AdminMainLayout() 
-                : const EmployeeMainLayout(),
+              builder: (context) => auth.isAdmin
+                  ? const AdminMainLayout()
+                  : const EmployeeMainLayout(),
             ),
           );
         } else {
-          // Show error
-          print('[LOGIN SCREEN] Login failed. Error message: ${auth.errorMessage}');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(auth.errorMessage ?? 'Login failed'),
-              backgroundColor: AppColors.error,
-              duration: const Duration(seconds: 5),
-            ),
+          // Show error with red border
+          setState(() {
+            _hasLoginError = true;
+            _loginErrorMessage = auth.errorMessage ?? 'Invalid email or password';
+          });
+          print(
+            '[LOGIN SCREEN] Login failed. Error message: ${auth.errorMessage}',
           );
         }
       }
@@ -127,11 +135,48 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                             const SizedBox(height: 35),
+                            // Error message display
+                            if (_hasLoginError && _loginErrorMessage != null) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.error),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _loginErrorMessage!,
+                                        style: const TextStyle(
+                                          color: AppColors.error,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             CustomTextField(
                               label: 'Email/ Username',
                               controller: _emailController,
                               prefixIcon: Icons.person_outline,
                               keyboardType: TextInputType.emailAddress,
+                              errorBorder: _hasLoginError,
+                              onChanged: (_) {
+                                if (_hasLoginError) {
+                                  setState(() {
+                                    _hasLoginError = false;
+                                    _loginErrorMessage = null;
+                                  });
+                                }
+                              },
                               validator: (value) =>
                                   value == null || value.isEmpty
                                   ? 'Please enter your email or username'
@@ -143,6 +188,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               controller: _passwordController,
                               prefixIcon: Icons.lock_outline,
                               obscureText: _obscurePassword,
+                              errorBorder: _hasLoginError,
+                              onChanged: (_) {
+                                if (_hasLoginError) {
+                                  setState(() {
+                                    _hasLoginError = false;
+                                    _loginErrorMessage = null;
+                                  });
+                                }
+                              },
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword
@@ -163,7 +217,30 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ? 'Password must be at least 6 characters'
                                   : null,
                             ),
-                            const SizedBox(height: 35),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const ForgotPasswordScreen(),
+                                    ),
+                                  );
+                                },
+                                child: const Text(
+                                  'Forgot password?',
+                                  style: TextStyle(
+                                    color: Color.fromARGB(255, 100, 100, 0),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
                             CustomButton(
                               text: 'Log in',
                               onPressed: _handleLogin,

@@ -121,6 +121,8 @@ class _EmployeeNotificationsScreenState extends State<EmployeeNotificationsScree
         if (!notification.isRead) {
           await provider.markAsRead(notification.id);
         }
+        // Show expanded notification modal
+        _showNotificationDetail(notification);
       },
       borderRadius: BorderRadius.circular(12),
       child: Container(
@@ -215,6 +217,73 @@ class _EmployeeNotificationsScreenState extends State<EmployeeNotificationsScree
     );
   }
 
+  void _showNotificationDetail(NotificationModel notification) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _getNotificationColor(notification.type).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _getNotificationIcon(notification.type),
+                color: _getNotificationColor(notification.type),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                notification.title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                notification.message,
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: AppColors.textPrimary,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                notification.timeAgo,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   IconData _getNotificationIcon(String type) {
     switch (type.toLowerCase()) {
       case 'attendance':
@@ -222,11 +291,15 @@ class _EmployeeNotificationsScreenState extends State<EmployeeNotificationsScree
       case 'leave':
       case 'leave_approved':
       case 'leave_denied':
+      case 'success':
+      case 'warning':
         return Icons.event_available;
       case 'announcement':
         return Icons.campaign;
       case 'reminder':
         return Icons.notifications_active;
+      case 'info':
+        return Icons.info_outline;
       default:
         return Icons.notifications;
     }
@@ -237,8 +310,11 @@ class _EmployeeNotificationsScreenState extends State<EmployeeNotificationsScree
       case 'attendance':
         return Colors.blue;
       case 'leave_approved':
+      case 'success':
         return Colors.green;
       case 'leave_denied':
+      case 'warning':
+      case 'error':
         return Colors.red;
       case 'leave':
         return Colors.orange;
@@ -246,6 +322,8 @@ class _EmployeeNotificationsScreenState extends State<EmployeeNotificationsScree
         return Colors.purple;
       case 'reminder':
         return Colors.amber;
+      case 'info':
+        return Colors.blue;
       default:
         return AppColors.secondary;
     }
