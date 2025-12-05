@@ -27,6 +27,7 @@ class LeaveProvider with ChangeNotifier {
   Future<bool> fileLeaveRequest({
     required String leaveDate,
     required String reason,
+    String? leaveType,
     String? attachmentUrl,
   }) async {
     _isLoading = true;
@@ -37,6 +38,7 @@ class LeaveProvider with ChangeNotifier {
       final response = await _apiService.fileLeaveRequest(
         leaveDate: leaveDate,
         reason: reason,
+        leaveType: leaveType,
         attachmentUrl: attachmentUrl,
       );
       
@@ -171,8 +173,7 @@ class LeaveProvider with ChangeNotifier {
 
   Future<bool> reviewLeaveRequest({
     required String id,
-    required String action, // 'approve' or 'decline'
-    String? adminNotes,
+    required String status, // 'approved' or 'declined'
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -181,8 +182,7 @@ class LeaveProvider with ChangeNotifier {
     try {
       final response = await _apiService.reviewLeaveRequest(
         id: id,
-        action: action,
-        adminNotes: adminNotes,
+        status: status,
       );
       
       if (response['error'] != null) {
@@ -192,12 +192,8 @@ class LeaveProvider with ChangeNotifier {
         return false;
       }
       
-      // Update the request in the list
-      final updatedRequest = LeaveRequestModel.fromJson(response['leave_request']);
-      final index = _pendingRequests.indexWhere((r) => r.id == id);
-      if (index != -1) {
-        _pendingRequests[index] = updatedRequest;
-      }
+      // Remove from pending list on review
+      _pendingRequests.removeWhere((r) => r.id == id);
       
       _isLoading = false;
       notifyListeners();

@@ -28,6 +28,15 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
   bool _isLoading = false;
   bool _isUploading = false;
   DateTime? _selectedDate;
+  String _selectedLeaveType = 'other';
+  
+  final List<Map<String, String>> _leaveTypes = [
+    {'id': 'sick', 'name': 'Sick Leave'},
+    {'id': 'vacation', 'name': 'Vacation Leave'},
+    {'id': 'emergency', 'name': 'Emergency Leave'},
+    {'id': 'personal', 'name': 'Personal Leave'},
+    {'id': 'other', 'name': 'Other'},
+  ];
 
   @override
   void dispose() {
@@ -208,6 +217,7 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
     final success = await leaveProvider.fileLeaveRequest(
       leaveDate: DateFormat('yyyy-MM-dd').format(_selectedDate!),
       reason: _reasonController.text.trim(),
+      leaveType: _selectedLeaveType,
       attachmentUrl: _uploadedImageUrl,
     );
 
@@ -249,6 +259,20 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Leave Type Field
+                    const Text(
+                      'Leave Type',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildLeaveTypeDropdown(),
+
+                    const SizedBox(height: 24),
+
                     // Date Field
                     const Text(
                       'Date of the desired leave',
@@ -334,6 +358,46 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLeaveTypeDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppColors.divider,
+          width: 1,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedLeaveType,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary),
+          items: _leaveTypes.map((type) {
+            return DropdownMenuItem<String>(
+              value: type['id'],
+              child: Text(
+                type['name']!,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              setState(() {
+                _selectedLeaveType = value;
+              });
+            }
+          },
+        ),
       ),
     );
   }

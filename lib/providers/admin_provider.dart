@@ -75,20 +75,26 @@ class AdminProvider with ChangeNotifier {
     try {
       final response = await _apiService.getAdminEmployees(barangayId: barangayId);
       
+      print('[ADMIN PROVIDER] fetchEmployees response: $response');
+      
       if (response['error'] != null) {
         _errorMessage = response['error'];
+        print('[ADMIN PROVIDER] fetchEmployees error: $_errorMessage');
         _isLoading = false;
         notifyListeners();
         return false;
       }
       
       final List<dynamic> records = response['employees'] ?? [];
+      print('[ADMIN PROVIDER] fetchEmployees records count: ${records.length}');
       _employees = records.map((r) => UserModel.fromJson(r)).toList();
+      print('[ADMIN PROVIDER] fetchEmployees parsed employees: ${_employees.length}');
       
       _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
+      print('[ADMIN PROVIDER] fetchEmployees exception: $e');
       _errorMessage = 'Network error. Please try again.';
       _isLoading = false;
       notifyListeners();
@@ -97,27 +103,20 @@ class AdminProvider with ChangeNotifier {
   }
 
   Future<UserModel?> getEmployeeDetail(String id) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+    // Don't call notifyListeners here to avoid setState during build
+    // This method returns data directly, caller handles its own state
 
     try {
       final response = await _apiService.getAdminEmployee(id);
       
       if (response['error'] != null) {
         _errorMessage = response['error'];
-        _isLoading = false;
-        notifyListeners();
         return null;
       }
       
-      _isLoading = false;
-      notifyListeners();
       return UserModel.fromJson(response['employee']);
     } catch (e) {
       _errorMessage = 'Network error. Please try again.';
-      _isLoading = false;
-      notifyListeners();
       return null;
     }
   }
@@ -142,6 +141,43 @@ class AdminProvider with ChangeNotifier {
       if (index != -1) {
         _employees[index] = _employees[index].copyWith(isActive: isActive);
       }
+      
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Network error. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateEmployee({
+    required String id,
+    String? position,
+    String? fullAddress,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiService.updateEmployee(
+        id: id,
+        position: position,
+        fullAddress: fullAddress,
+      );
+      
+      if (response['error'] != null) {
+        _errorMessage = response['error'];
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+      
+      // Refetch employee to get updated data
+      await fetchEmployees();
       
       _isLoading = false;
       notifyListeners();
@@ -227,8 +263,7 @@ class AdminProvider with ChangeNotifier {
 
   Future<bool> reviewLeaveRequest({
     required String id,
-    required String action,
-    String? adminNotes,
+    required String status, // 'approved' or 'declined'
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -237,8 +272,7 @@ class AdminProvider with ChangeNotifier {
     try {
       final response = await _apiService.reviewLeaveRequest(
         id: id,
-        action: action,
-        adminNotes: adminNotes,
+        status: status,
       );
       
       if (response['error'] != null) {
@@ -248,13 +282,8 @@ class AdminProvider with ChangeNotifier {
         return false;
       }
       
-      // Update the leave request in the list
-      final index = _leaveRequests.indexWhere((r) => r.id == id);
-      if (index != -1) {
-        _leaveRequests[index] = _leaveRequests[index].copyWith(
-          status: action == 'approve' ? 'approved' : 'denied',
-        );
-      }
+      // Remove the reviewed leave request from the list
+      _leaveRequests.removeWhere((r) => r.id == id);
       
       _isLoading = false;
       notifyListeners();

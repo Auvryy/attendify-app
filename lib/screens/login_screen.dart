@@ -6,6 +6,7 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/logo_widget.dart';
 import '../../providers/auth_provider.dart';
 import '../screens/signup_screen.dart';
+import '../screens/forgot_password_screen.dart';
 import 'admin/admin_main_layout.dart';
 import 'employee/employee_main_layout.dart';
 
@@ -33,29 +34,31 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      
+
       final auth = context.read<AuthProvider>();
       final success = await auth.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
-      
+
       if (mounted) {
         setState(() => _isLoading = false);
-        
+
         if (success) {
           // Navigate based on role
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => auth.isAdmin 
-                ? const AdminMainLayout() 
-                : const EmployeeMainLayout(),
+              builder: (context) => auth.isAdmin
+                  ? const AdminMainLayout()
+                  : const EmployeeMainLayout(),
             ),
           );
         } else {
           // Show error
-          print('[LOGIN SCREEN] Login failed. Error message: ${auth.errorMessage}');
+          print(
+            '[LOGIN SCREEN] Login failed. Error message: ${auth.errorMessage}',
+          );
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(auth.errorMessage ?? 'Login failed'),
@@ -163,7 +166,30 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ? 'Password must be at least 6 characters'
                                   : null,
                             ),
-                            const SizedBox(height: 35),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const ForgotPasswordScreen(),
+                                    ),
+                                  );
+                                },
+                                child: const Text(
+                                  'Forgot password?',
+                                  style: TextStyle(
+                                    color: Color.fromARGB(255, 100, 100, 0),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
                             CustomButton(
                               text: 'Log in',
                               onPressed: _handleLogin,

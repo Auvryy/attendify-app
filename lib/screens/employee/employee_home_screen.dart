@@ -30,7 +30,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final user = auth.user;
-    
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -38,21 +38,24 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
           children: [
             // Header with logo and title
             _buildHeader(),
-            
+
             // Main content
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 20),
-                    
+
                     // QR Code Card
                     _buildQRCodeCard(user?.qrCode ?? user?.id ?? 'NO-QR'),
-                    
+
                     const SizedBox(height: 30),
-                    
+
                     // Menu Items
                     _buildMenuItem(
                       title: 'Attendance History',
@@ -60,7 +63,8 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const AttendanceHistoryScreen(),
+                            builder: (context) =>
+                                const AttendanceHistoryScreen(),
                           ),
                         );
                       },
@@ -108,10 +112,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
             height: 50,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.accent,
-                width: 2,
-              ),
+              border: Border.all(color: AppColors.accent, width: 2),
             ),
             child: ClipOval(
               child: Image.asset(
@@ -128,7 +129,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
             ),
           ),
           const SizedBox(width: 15),
-          
+
           // Title
           const Text(
             'ATTENDIFY',
@@ -139,22 +140,6 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
               letterSpacing: 1,
             ),
           ),
-          const Spacer(),
-          
-          // Profile Avatar
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.accent,
-            ),
-            child: const Icon(
-              Icons.person,
-              color: AppColors.white,
-              size: 24,
-            ),
-          ),
         ],
       ),
     );
@@ -163,9 +148,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
   Widget _buildQRCodeCard(String qrData) {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: AppColors.cardBackground,
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -180,17 +163,14 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
               ),
             ),
             const SizedBox(height: 30),
-            
+
             // QR Code
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppColors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.divider,
-                  width: 2,
-                ),
+                border: Border.all(color: AppColors.divider, width: 2),
               ),
               child: QrImageView(
                 data: qrData,
@@ -200,7 +180,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            
+
             const Text(
               'Your QR Code',
               style: TextStyle(
@@ -215,10 +195,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
     );
   }
 
-  Widget _buildMenuItem({
-    required String title,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildMenuItem({required String title, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),

@@ -353,7 +353,7 @@ class _AdminLeaveRequestDetailScreenState extends State<AdminLeaveRequestDetailS
                 
                 final success = await context.read<AdminProvider>().reviewLeaveRequest(
                   id: widget.requestId,
-                  action: 'deny',
+                  status: 'declined',
                 );
                 
                 setState(() => _isProcessing = false);
@@ -405,7 +405,7 @@ class _AdminLeaveRequestDetailScreenState extends State<AdminLeaveRequestDetailS
                 
                 final success = await context.read<AdminProvider>().reviewLeaveRequest(
                   id: widget.requestId,
-                  action: 'approve',
+                  status: 'approved',
                 );
                 
                 setState(() => _isProcessing = false);
