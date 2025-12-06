@@ -87,7 +87,8 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
 
     if (success) {
       if (mounted) {
-        Navigator.pushReplacement(
+        // Show success screen then pop back with true result
+        await Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => const PhoneNumberChangedScreen(),

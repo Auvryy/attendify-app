@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/auth_provider.dart';
 import 'password_changed_screen.dart';
+import '../forgot_password_screen.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -134,8 +136,38 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: TextButton(
-                        onPressed: () {
-                          // Handle forgot password
+                        onPressed: () async {
+                          // Show confirmation dialog
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Forgot Password?'),
+                              content: const Text('You will be logged out and redirected to reset your password. Continue?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, false),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  child: const Text('Continue'),
+                                ),
+                              ],
+                            ),
+                          );
+                          
+                          if (confirm == true && mounted) {
+                            // Logout and navigate to forgot password
+                            await context.read<AuthProvider>().logout();
+                            if (mounted) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const ForgotPasswordScreen(),
+                                ),
+                              );
+                            }
+                          }
                         },
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,

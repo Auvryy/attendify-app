@@ -69,10 +69,13 @@ class _ChangeEmailScreenState extends State<ChangeEmailScreen> {
       }
     } else {
       if (mounted) {
+        // Show specific error message (e.g., 'Email already in use')
+        String errorMsg = userProvider.errorMessage ?? 'Failed to send OTP';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(userProvider.errorMessage ?? 'Failed to send OTP'),
+            content: Text(errorMsg),
             backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 4),
           ),
         );
       }

@@ -9,8 +9,22 @@ import 'change_phone_number_screen.dart';
 import 'change_password_screen.dart';
 import 'change_email_screen.dart';
 
-class AccountSecurityScreen extends StatelessWidget {
+class AccountSecurityScreen extends StatefulWidget {
   const AccountSecurityScreen({super.key});
+
+  @override
+  State<AccountSecurityScreen> createState() => _AccountSecurityScreenState();
+}
+
+class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Refresh user data when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthProvider>().init();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

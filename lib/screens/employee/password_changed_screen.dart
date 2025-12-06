@@ -53,8 +53,12 @@ class PasswordChangedScreen extends StatelessWidget {
                   height: 50,
                   child: ElevatedButton(
                     onPressed: () {
-                      // Navigate back to account security or home
-                      Navigator.of(context).popUntil((route) => route.isFirst);
+                      // Pop back to account screen
+                      int count = 0;
+                      Navigator.of(context).popUntil((route) {
+                        count++;
+                        return count == 2 || route.isFirst;
+                      });
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accent,
