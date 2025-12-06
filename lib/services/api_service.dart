@@ -306,11 +306,17 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  Future<Map<String, dynamic>> changeEmailVerify(String otp, String newEmail) async {
+  Future<Map<String, dynamic>> changeEmailVerify(
+    String newEmail,
+    String otpCode,
+  ) async {
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.changeEmailVerify}'),
       headers: _headers,
-      body: jsonEncode({'otp': otp, 'new_email': newEmail}),
+      body: jsonEncode({
+        'new_email': newEmail,
+        'otp_code': otpCode,
+      }),
     );
     return jsonDecode(response.body);
   }
@@ -334,7 +340,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> changePassword(String currentPassword, String newPassword) async {
-    final response = await http.put(
+    final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.changePassword}'),
       headers: _headers,
       body: jsonEncode({
@@ -629,12 +635,7 @@ class ApiService {
       headers: _headers,
     );
     print('[API] getNotifications response: ${response.body}');
-    final body = jsonDecode(response.body);
-    // Backend returns {success, data: {notifications: [...]}}
-    if (body['success'] == true && body['data'] != null) {
-      return body['data'];
-    }
-    return {'error': body['message'] ?? 'Failed to fetch notifications'};
+    return jsonDecode(response.body);
   }
 
   Future<Map<String, dynamic>> markNotificationRead(String id) async {
@@ -642,11 +643,7 @@ class ApiService {
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.notifications}/$id/read'),
       headers: _headers,
     );
-    final body = jsonDecode(response.body);
-    if (body['success'] == true) {
-      return body['data'] ?? {'success': true};
-    }
-    return {'error': body['message'] ?? 'Failed to mark notification as read'};
+    return jsonDecode(response.body);
   }
 
   Future<Map<String, dynamic>> markAllNotificationsRead() async {
