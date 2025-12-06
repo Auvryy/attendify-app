@@ -306,11 +306,17 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  Future<Map<String, dynamic>> changeEmailVerify(String otp, String newEmail) async {
+  Future<Map<String, dynamic>> changeEmailVerify(
+    String newEmail,
+    String otpCode,
+  ) async {
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.changeEmailVerify}'),
       headers: _headers,
-      body: jsonEncode({'otp': otp, 'new_email': newEmail}),
+      body: jsonEncode({
+        'new_email': newEmail,
+        'otp_code': otpCode,
+      }),
     );
     return jsonDecode(response.body);
   }

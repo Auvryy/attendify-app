@@ -63,7 +63,23 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         } else {
-          // Show error with red border
+          // Show error dialog
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Login Failed'),
+                content: Text(auth.errorMessage ?? 'Invalid email or password'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+          }
+          
           setState(() {
             _hasLoginError = true;
             _loginErrorMessage = auth.errorMessage ?? 'Invalid email or password';
@@ -91,19 +107,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 115,
                   width: double.infinity,
                   color: AppColors.primary, // Yellow
-                  child: Align(
-                    alignment: Alignment.topRight,
-                    child: TextButton(
-                      onPressed: () {},
-                      child: const Padding(
-                        padding: EdgeInsets.only(top: 12.0, right: 16),
-                        child: Text(
-                          'About us',
-                          style: TextStyle(color: Colors.black87, fontSize: 14),
-                        ),
-                      ),
-                    ),
-                  ),
                 ),
                 // Navy bar below yellow
                 Container(

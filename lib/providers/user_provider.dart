@@ -292,7 +292,7 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _apiService.changeEmailVerify(otp, newEmail);
+      final response = await _apiService.changeEmailVerify(newEmail, otp);
       
       if (response['success'] != true) {
         _errorMessage = response['message'] ?? 'Invalid verification code';
