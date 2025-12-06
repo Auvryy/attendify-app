@@ -298,11 +298,14 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> changeEmailSendOtp(String newEmail) async {
+    print('[API] changeEmailSendOtp - Token present: ${_accessToken != null}');
+    print('[API] changeEmailSendOtp - Headers: $_headers');
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.changeEmailSendOtp}'),
       headers: _headers,
       body: jsonEncode({'new_email': newEmail}),
     );
+    print('[API] changeEmailSendOtp - Response status: ${response.statusCode}');
     return jsonDecode(response.body);
   }
 
@@ -334,7 +337,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> changePassword(String currentPassword, String newPassword) async {
-    final response = await http.put(
+    final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.changePassword}'),
       headers: _headers,
       body: jsonEncode({

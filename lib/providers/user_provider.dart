@@ -263,16 +263,16 @@ class UserProvider with ChangeNotifier {
     try {
       final response = await _apiService.changeEmailSendOtp(newEmail);
       
-      if (response['error'] != null) {
-        _errorMessage = response['error'];
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to send OTP';
         _isLoading = false;
         notifyListeners();
         return false;
       }
       
-      // Development mode - OTP might be returned
-      if (response['otp'] != null) {
-        _otpForDev = response['otp'];
+      // Development mode - OTP might be returned in data
+      if (response['data'] != null && response['data']['otp'] != null) {
+        _otpForDev = response['data']['otp'];
       }
       
       _isLoading = false;
@@ -294,8 +294,8 @@ class UserProvider with ChangeNotifier {
     try {
       final response = await _apiService.changeEmailVerify(otp, newEmail);
       
-      if (response['error'] != null) {
-        _errorMessage = response['error'];
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to verify OTP';
         _isLoading = false;
         notifyListeners();
         return false;
@@ -382,8 +382,8 @@ class UserProvider with ChangeNotifier {
     try {
       final response = await _apiService.changePassword(currentPassword, newPassword);
       
-      if (response['error'] != null) {
-        _errorMessage = response['error'];
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to change password';
         _isLoading = false;
         notifyListeners();
         return false;
