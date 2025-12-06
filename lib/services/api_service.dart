@@ -356,6 +356,15 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  Future<Map<String, dynamic>> scanAttendanceFromImage(String base64Image) async {
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceScan}'),
+      headers: _headers,
+      body: jsonEncode({'image': base64Image}),
+    );
+    return jsonDecode(response.body);
+  }
+
   Future<Map<String, dynamic>> getAttendanceHistory({int page = 1, int limit = 20}) async {
     final response = await http.get(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceHistory}?page=$page&limit=$limit'),
@@ -368,6 +377,18 @@ class ApiService {
     final response = await http.get(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceToday}'),
       headers: _headers,
+    );
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> submitEarlyOut(String attendanceId, String reason) async {
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceEarlyOut}'),
+      headers: _headers,
+      body: jsonEncode({
+        'attendance_id': attendanceId,
+        'reason': reason,
+      }),
     );
     return jsonDecode(response.body);
   }

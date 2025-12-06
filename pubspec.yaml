@@ -36,6 +36,8 @@ dependencies:
   qr_flutter: ^4.1.0
   image_picker: ^1.0.7
   mobile_scanner: ^5.1.1
+  share_plus: ^7.2.1
+  flutter_file_dialog: ^3.0.2
   # HTTP and State Management
   http: ^1.2.0
   provider: ^6.1.1

@@ -55,6 +55,70 @@ class AttendanceProvider with ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>?> scanAttendanceFromImage(String base64Image) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiService.scanAttendanceFromImage(base64Image);
+      
+      if (response['error'] != null) {
+        _errorMessage = response['error'];
+        _isLoading = false;
+        notifyListeners();
+        return null;
+      }
+      
+      // Update today's attendance
+      if (response['attendance'] != null) {
+        _todayAttendance = AttendanceModel.fromJson(response['attendance']);
+      }
+      
+      _isLoading = false;
+      notifyListeners();
+      return response;
+    } catch (e) {
+      _errorMessage = 'Network error. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // ==================== EARLY OUT ====================
+
+  Future<Map<String, dynamic>?> submitEarlyOut(String attendanceId, String reason) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiService.submitEarlyOut(attendanceId, reason);
+      
+      if (response['error'] != null) {
+        _errorMessage = response['error'];
+        _isLoading = false;
+        notifyListeners();
+        return null;
+      }
+      
+      // Update today's attendance
+      if (response['attendance'] != null) {
+        _todayAttendance = AttendanceModel.fromJson(response['attendance']);
+      }
+      
+      _isLoading = false;
+      notifyListeners();
+      return response;
+    } catch (e) {
+      _errorMessage = 'Network error. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
   // ==================== ATTENDANCE HISTORY ====================
 
   Future<bool> fetchAttendanceHistory({bool refresh = false}) async {
