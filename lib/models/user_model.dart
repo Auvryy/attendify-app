@@ -17,6 +17,8 @@ class UserModel {
   final String? qrCode;
   final bool isActive;
   final DateTime createdAt;
+  final String? shiftStartTime; // Format: HH:mm:ss
+  final String? shiftEndTime;   // Format: HH:mm:ss
 
   UserModel({
     required this.id,
@@ -35,6 +37,8 @@ class UserModel {
     this.qrCode,
     this.isActive = true,
     required this.createdAt,
+    this.shiftStartTime,
+    this.shiftEndTime,
   });
 
   // Computed property for full name
@@ -60,6 +64,8 @@ class UserModel {
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at']) 
           : DateTime.now(),
+      shiftStartTime: json['shift_start_time'],
+      shiftEndTime: json['shift_end_time'],
     );
   }
 
@@ -81,6 +87,8 @@ class UserModel {
       'qr_code': qrCode,
       'is_active': isActive,
       'created_at': createdAt.toIso8601String(),
+      'shift_start_time': shiftStartTime,
+      'shift_end_time': shiftEndTime,
     };
   }
 
@@ -104,6 +112,8 @@ class UserModel {
     String? qrCode,
     bool? isActive,
     DateTime? createdAt,
+    String? shiftStartTime,
+    String? shiftEndTime,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -122,6 +132,8 @@ class UserModel {
       qrCode: qrCode ?? this.qrCode,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
+      shiftStartTime: shiftStartTime ?? this.shiftStartTime,
+      shiftEndTime: shiftEndTime ?? this.shiftEndTime,
     );
   }
   

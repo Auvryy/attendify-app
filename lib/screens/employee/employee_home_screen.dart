@@ -6,14 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:flutter_file_dialog/flutter_file_dialog.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/attendance_provider.dart';
 import 'attendance_history_screen.dart';
 import 'file_leave_screen.dart';
-import 'qr_scanner_screen.dart';
 
 class EmployeeHomeScreen extends StatefulWidget {
   const EmployeeHomeScreen({super.key});
@@ -125,11 +123,6 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
                     _buildQRCodeCard(user?.qrCode ?? user?.id ?? 'NO-QR'),
 
                     const SizedBox(height: 30),
-
-                    // Scan Attendance Button
-                    _buildScanButton(),
-
-                    const SizedBox(height: 20),
 
                     // Menu Items
                     _buildMenuItem(
@@ -293,46 +286,6 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildScanButton() {
-    return ElevatedButton(
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const QRScannerScreen(),
-          ),
-        );
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primary,
-        padding: const EdgeInsets.symmetric(vertical: 18),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        elevation: 4,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.qr_code_scanner,
-            color: AppColors.accent,
-            size: 28,
-          ),
-          const SizedBox(width: 12),
-          const Text(
-            'Scan Attendance QR',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.accent,
-            ),
-          ),
-        ],
       ),
     );
   }
