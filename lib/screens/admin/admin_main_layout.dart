@@ -128,19 +128,6 @@ class _AdminMainLayoutState extends State<AdminMainLayout> {
                 },
                 enabled: _isCameraSupported,
               ),
-              const SizedBox(height: 12),
-
-              // Choose from Gallery Button
-              _buildOptionButton(
-                icon: Icons.photo_library_outlined,
-                title: 'Choose from Gallery',
-                subtitle: 'Select JPG or PNG image',
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImageFromGallery();
-                },
-                enabled: true,
-              ),
               const SizedBox(height: 20),
             ],
           ),

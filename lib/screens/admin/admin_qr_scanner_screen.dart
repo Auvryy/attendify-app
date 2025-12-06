@@ -320,6 +320,27 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
               ),
             ),
           ),
+        // Upload QR button positioned at bottom
+        Positioned(
+          bottom: 20,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: ElevatedButton.icon(
+              onPressed: _pickImageAndScan,
+              icon: const Icon(Icons.photo_library),
+              label: const Text('Upload QR Image'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.accent,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -350,29 +371,14 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
   Widget _buildBottomControls() {
     return Column(
       children: [
-        // Upload QR Image button
-        ElevatedButton.icon(
-          onPressed: _pickImageAndScan,
-          icon: const Icon(Icons.photo_library),
-          label: const Text('Upload QR Image'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: AppColors.accent,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
         // Manual entry button (for fallback)
-        OutlinedButton.icon(
+        ElevatedButton.icon(
           onPressed: () => _showManualEntryDialog(),
           icon: const Icon(Icons.keyboard),
           label: const Text('Enter Code Manually'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.white,
-            side: const BorderSide(color: Colors.white, width: 2),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.accent,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(25),

@@ -212,7 +212,7 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.divider),
+                      border: Border.all(color: Colors.grey.shade400),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Row(
@@ -262,7 +262,7 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.divider),
+                      border: Border.all(color: Colors.grey.shade400),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Row(
@@ -745,11 +745,6 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                 ),
               ],
             ),
-          ),
-          const Icon(
-            Icons.edit_outlined,
-            color: AppColors.textSecondary,
-            size: 18,
           ),
         ],
       ),
