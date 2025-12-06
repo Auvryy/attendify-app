@@ -181,9 +181,10 @@ class AuthProvider with ChangeNotifier {
   // ==================== LOGIN ====================
 
   Future<bool> login(String email, String password) async {
-    _status = AuthStatus.loading;
+    // Don't set loading state here to avoid full-screen loader
+    // _status = AuthStatus.loading;
     _errorMessage = null;
-    notifyListeners();
+    // notifyListeners();
 
     try {
       final response = await _apiService.login(email, password);

@@ -50,8 +50,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (mounted) {
-        setState(() => _isLoading = false);
-
         if (success) {
           // Navigate based on role
           Navigator.pushReplacement(
@@ -63,6 +61,8 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         } else {
+          setState(() => _isLoading = false);
+
           // Show error dialog
           if (mounted) {
             showDialog(
