@@ -274,7 +274,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: AppColors.secondary,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 12,

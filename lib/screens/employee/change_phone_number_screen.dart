@@ -22,11 +22,16 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill with current phone
+    // Pre-fill with current phone (remove +63 if present for editing)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = context.read<AuthProvider>().user;
       if (user != null) {
-        _phoneController.text = user.phone;
+        String phone = user.phone;
+        // Remove +63 prefix if present for easier editing
+        if (phone.startsWith('+63')) {
+          phone = '0${phone.substring(3)}';
+        }
+        _phoneController.text = phone;
       }
     });
   }
@@ -48,19 +53,24 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
       return;
     }
 
-    // Basic phone validation - allow various formats
-    final phone = _phoneController.text.trim();
-    // Remove common formatting characters for length check
-    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
-    if (cleanPhone.length < 7 || cleanPhone.length > 15) {
+    // Philippine phone validation
+    final input = _phoneController.text.trim();
+    // Remove spaces and dashes
+    final cleanPhone = input.replaceAll(RegExp(r'[\s\-]'), '');
+    
+    // Must be 10 digits starting with 9 (9XXXXXXXXX format)
+    if (!RegExp(r'^9\d{9}$').hasMatch(cleanPhone)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter a valid phone number'),
+          content: Text('Please enter a valid 10-digit Philippine mobile number starting with 9 (9XXXXXXXXX)'),
           backgroundColor: AppColors.error,
         ),
       );
       return;
     }
+    
+    // Add +63 prefix
+    final phone = '+63${cleanPhone}';
 
     setState(() {
       _isLoading = true;
@@ -69,6 +79,8 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
     final userProvider = context.read<UserProvider>();
     final success = await userProvider.updatePhone(phone);
 
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = false;
     });
@@ -124,10 +136,48 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Phone Number Field
-                    _buildTextField(
-                      controller: _phoneController,
-                      hintText: 'Enter new number',
+                    // Phone Number Field with +63 prefix
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 48,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: AppColors.cardBackground,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(8),
+                              bottomLeft: Radius.circular(8),
+                            ),
+                            border: Border.all(
+                              color: AppColors.divider,
+                              width: 1,
+                            ),
+                          ),
+                          child: const Text(
+                            '+63',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildTextField(
+                            controller: _phoneController,
+                            hintText: '9XXXXXXXXX',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Enter 10-digit mobile number (e.g., 9171234567)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
 
                     const SizedBox(height: 80),
@@ -183,37 +233,6 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
               color: AppColors.accent,
             ),
           ),
-
-          const Spacer(),
-
-          // Profile Avatar
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.accent,
-                width: 2,
-              ),
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/images/profile-avatar.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: AppColors.accent,
-                    child: const Icon(
-                      Icons.person,
-                      color: AppColors.white,
-                      size: 24,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -226,7 +245,10 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(8),
+          bottomRight: Radius.circular(8),
+        ),
         border: Border.all(
           color: AppColors.divider,
           width: 1,
