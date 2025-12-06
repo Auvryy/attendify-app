@@ -7,6 +7,7 @@ import '../../services/api_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import 'password_changed_screen.dart';
+import '../forgot_password_screen.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
