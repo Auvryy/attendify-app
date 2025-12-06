@@ -125,10 +125,13 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
     TimeOfDay shiftStartTime = _parseTimeString(employee.shiftStartTime) ?? const TimeOfDay(hour: 8, minute: 0);
     TimeOfDay shiftEndTime = _parseTimeString(employee.shiftEndTime) ?? const TimeOfDay(hour: 17, minute: 0);
 
+    // Capture the parent context before showing dialog
+    final parentContext = context;
+
     showDialog(
-      context: context,
+      context: parentContext,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (statefulContext, setDialogState) => AlertDialog(
           title: const Text('Edit Employee'),
           content: SingleChildScrollView(
             child: Column(
@@ -191,16 +194,16 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                 InkWell(
                   onTap: () async {
                     final picked = await showTimePicker(
-                      context: context,
+                      context: parentContext,
                       initialTime: shiftStartTime,
-                      builder: (context, child) {
+                      builder: (builderContext, child) {
                         return MediaQuery(
-                          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
+                          data: MediaQuery.of(builderContext).copyWith(alwaysUse24HourFormat: false),
                           child: child!,
                         );
                       },
                     );
-                    if (picked != null) {
+                    if (picked != null && mounted) {
                       setDialogState(() {
                         shiftStartTime = picked;
                       });
@@ -226,7 +229,7 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                shiftStartTime.format(context),
+                                '${shiftStartTime.hourOfPeriod == 0 ? 12 : shiftStartTime.hourOfPeriod}:${shiftStartTime.minute.toString().padLeft(2, '0')} ${shiftStartTime.period == DayPeriod.am ? 'AM' : 'PM'}',
                                 style: const TextStyle(fontSize: 16, color: AppColors.textPrimary),
                               ),
                             ],
@@ -241,16 +244,16 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                 InkWell(
                   onTap: () async {
                     final picked = await showTimePicker(
-                      context: context,
+                      context: parentContext,
                       initialTime: shiftEndTime,
-                      builder: (context, child) {
+                      builder: (builderContext, child) {
                         return MediaQuery(
-                          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
+                          data: MediaQuery.of(builderContext).copyWith(alwaysUse24HourFormat: false),
                           child: child!,
                         );
                       },
                     );
-                    if (picked != null) {
+                    if (picked != null && mounted) {
                       setDialogState(() {
                         shiftEndTime = picked;
                       });
@@ -276,7 +279,7 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                shiftEndTime.format(context),
+                                '${shiftEndTime.hourOfPeriod == 0 ? 12 : shiftEndTime.hourOfPeriod}:${shiftEndTime.minute.toString().padLeft(2, '0')} ${shiftEndTime.period == DayPeriod.am ? 'AM' : 'PM'}',
                                 style: const TextStyle(fontSize: 16, color: AppColors.textPrimary),
                               ),
                             ],
@@ -299,7 +302,7 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                 // Validate required fields
                 if (firstNameController.text.trim().isEmpty ||
                     lastNameController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
                     const SnackBar(
                       content: Text('First name and last name are required'),
                       backgroundColor: AppColors.error,
@@ -308,11 +311,15 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                   return;
                 }
 
+                // Close dialog first
                 Navigator.pop(dialogContext);
+
+                // Now safely use the parent context
+                if (!mounted) return;
 
                 setState(() => _isLoading = true);
 
-                final adminProvider = context.read<AdminProvider>();
+                final adminProvider = parentContext.read<AdminProvider>();
                 final success = await adminProvider.updateEmployee(
                   id: employee.id,
                   firstName: firstNameController.text.trim(),
@@ -333,19 +340,23 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                   shiftEndTime: _formatTimeTo24Hour(shiftEndTime),
                 );
 
-                if (mounted) {
-                  if (success) {
-                    // Refresh employee data
-                    await _loadEmployeeData();
-                    ScaffoldMessenger.of(context).showSnackBar(
+                if (!mounted) return;
+
+                if (success) {
+                  // Refresh employee data
+                  await _loadEmployeeData();
+                  if (mounted) {
+                    ScaffoldMessenger.of(parentContext).showSnackBar(
                       const SnackBar(
                         content: Text('Employee updated successfully'),
                         backgroundColor: AppColors.success,
                       ),
                     );
-                  } else {
-                    setState(() => _isLoading = false);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                  }
+                } else {
+                  setState(() => _isLoading = false);
+                  if (mounted) {
+                    ScaffoldMessenger.of(parentContext).showSnackBar(
                       SnackBar(
                         content: Text(
                           adminProvider.errorMessage ??
