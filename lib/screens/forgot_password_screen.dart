@@ -9,7 +9,12 @@ import '../widgets/logo_widget.dart';
 import '../services/api_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  final String? initialEmail;
+  
+  const ForgotPasswordScreen({
+    super.key,
+    this.initialEmail,
+  });
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
@@ -19,7 +24,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _apiService = ApiService();
 
   // Controllers
-  final _emailController = TextEditingController();
+  late final TextEditingController _emailController;
   final _otpController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -35,6 +40,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? _email;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController(text: widget.initialEmail);
+    if (widget.initialEmail != null) {
+      _email = widget.initialEmail;
+    }
+  }
 
   @override
   void dispose() {

@@ -334,7 +334,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> changePassword(String currentPassword, String newPassword) async {
-    final response = await http.put(
+    final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.changePassword}'),
       headers: _headers,
       body: jsonEncode({

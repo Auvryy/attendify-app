@@ -734,6 +734,8 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                     fontWeight: FontWeight.w500,
                     color: AppColors.textPrimary,
                   ),
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
                 ),
                 const SizedBox(height: 2),
                 Text(
