@@ -26,12 +26,12 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = context.read<AuthProvider>().user;
       if (user != null) {
-        String phone = user.phone;
-        // Remove +63 prefix if present for easier editing
-        if (phone.startsWith('+63')) {
-          phone = '0${phone.substring(3)}';
-        }
-        _phoneController.text = phone;
+            String phone = user.phone;
+            // Remove +63 prefix if present for easier editing
+            if (phone.startsWith('+63')) {
+              phone = phone.substring(3); // show as 9XXXXXXXXX
+            }
+            _phoneController.text = phone;
       }
     });
   }
@@ -70,7 +70,7 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
     }
     
     // Add +63 prefix
-    final phone = '+63${cleanPhone}';
+    final phone = '+63$cleanPhone';
 
     setState(() {
       _isLoading = true;
@@ -87,8 +87,12 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
 
     if (success) {
       if (mounted) {
-        // Show success screen then pop back with true result
-        await Navigator.pushReplacement(
+        final authProvider = context.read<AuthProvider>();
+        if (authProvider.user != null) {
+          authProvider.updateUser(authProvider.user!.copyWith(phone: phone));
+        }
+
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => const PhoneNumberChangedScreen(),

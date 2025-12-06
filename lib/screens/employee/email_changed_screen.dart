@@ -53,12 +53,8 @@ class EmailChangedScreen extends StatelessWidget {
                   height: 50,
                   child: ElevatedButton(
                     onPressed: () {
-                      // Pop back to account screen (2 screens back)
-                      int count = 0;
-                      Navigator.of(context).popUntil((route) {
-                        count++;
-                        return count == 3 || route.isFirst;
-                      });
+                      // Navigate back to account security or home
+                      Navigator.of(context).pop(true);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accent,

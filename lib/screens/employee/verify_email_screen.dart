@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/auth_provider.dart';
 import 'email_changed_screen.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
@@ -64,13 +65,21 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
     if (success) {
       if (mounted) {
-        // Navigate to success screen
-        Navigator.pushReplacement(
+        final authProvider = context.read<AuthProvider>();
+        if (authProvider.user != null) {
+          authProvider.updateUser(authProvider.user!.copyWith(email: widget.newEmail));
+        }
+
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => const EmailChangedScreen(),
           ),
         );
+
+        if (result == true && mounted) {
+          Navigator.pop(context, true);
+        }
       }
     } else {
       if (mounted) {

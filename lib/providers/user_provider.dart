@@ -270,9 +270,9 @@ class UserProvider with ChangeNotifier {
         return false;
       }
       
-      // Development mode - OTP might be returned in data
-      if (response['data'] != null && response['data']['otp'] != null) {
-        _otpForDev = response['data']['otp'];
+      // Development mode - OTP might be returned
+      if (response['otp'] != null) {
+        _otpForDev = response['otp'];
       }
       
       _isLoading = false;
@@ -286,7 +286,7 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> changeEmailVerify(String otp, String newEmail) async {
+  Future<bool> changeEmailVerify(String newEmail, String otp) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -295,7 +295,7 @@ class UserProvider with ChangeNotifier {
       final response = await _apiService.changeEmailVerify(otp, newEmail);
       
       if (response['success'] != true) {
-        _errorMessage = response['message'] ?? 'Failed to verify OTP';
+        _errorMessage = response['message'] ?? 'Invalid verification code';
         _isLoading = false;
         notifyListeners();
         return false;

@@ -60,22 +60,23 @@ class _ChangeEmailScreenState extends State<ChangeEmailScreen> {
     if (success) {
       if (mounted) {
         // Navigate to verification screen with the new email
-        Navigator.push(
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => VerifyEmailScreen(newEmail: email),
           ),
         );
+
+        if (result == true && mounted) {
+          Navigator.pop(context, true);
+        }
       }
     } else {
       if (mounted) {
-        // Show specific error message (e.g., 'Email already in use')
-        String errorMsg = userProvider.errorMessage ?? 'Failed to send OTP';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(errorMsg),
+            content: Text(userProvider.errorMessage ?? 'Failed to send OTP'),
             backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 4),
           ),
         );
       }

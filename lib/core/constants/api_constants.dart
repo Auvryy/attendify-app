@@ -4,10 +4,10 @@ class ApiConstants {
   // Change this to your deployed backend URL in production
   // For local development with Android emulator, use 10.0.2.2:5000
   // For local development with iOS simulator or physical device on same network, use your computer's IP
-  static const String baseUrl = 'http://192.168.1.2:5000/api';
+  // static const String baseUrl = 'http://10.0.2.2:5000/api';
   
   // For physical device testing on same WiFi network, use your computer's local IP
-  // static const String baseUrl = 'http://192.168.1.2:5000/api';
+  static const String baseUrl = 'http://192.168.1.2:5000/api';
   
   // Auth endpoints
   static const String registerSendOtp = '/auth/register/send-otp';

@@ -9,22 +9,8 @@ import 'change_phone_number_screen.dart';
 import 'change_password_screen.dart';
 import 'change_email_screen.dart';
 
-class AccountSecurityScreen extends StatefulWidget {
+class AccountSecurityScreen extends StatelessWidget {
   const AccountSecurityScreen({super.key});
-
-  @override
-  State<AccountSecurityScreen> createState() => _AccountSecurityScreenState();
-}
-
-class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Refresh user data when screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AuthProvider>().init();
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -203,39 +189,6 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
             ),
           ),
           const Spacer(),
-          
-          // Profile Avatar
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.accent,
-              border: Border.all(
-                color: AppColors.accent,
-                width: 2,
-              ),
-            ),
-            child: ClipOval(
-              child: profileImageUrl != null
-                  ? Image.network(
-                      profileImageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.person,
-                          color: AppColors.white,
-                          size: 24,
-                        );
-                      },
-                    )
-                  : const Icon(
-                      Icons.person,
-                      color: AppColors.white,
-                      size: 24,
-                    ),
-            ),
-          ),
         ],
       ),
     );
