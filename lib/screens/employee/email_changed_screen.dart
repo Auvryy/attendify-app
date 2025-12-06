@@ -54,7 +54,7 @@ class EmailChangedScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () {
                       // Navigate back to account security or home
-                      Navigator.of(context).popUntil((route) => route.isFirst);
+                      Navigator.of(context).pop(true);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accent,

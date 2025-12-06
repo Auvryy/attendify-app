@@ -16,9 +16,7 @@ class NotificationSettingsScreen extends StatefulWidget {
 
 class _NotificationSettingsScreenState
     extends State<NotificationSettingsScreen> {
-  bool _smsNotifications = true;
   bool _appNotifications = true;
-  bool _emailNotifications = true;
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -40,9 +38,7 @@ class _NotificationSettingsScreenState
     if (mounted) {
       final settings = userProvider.settings;
       setState(() {
-        _smsNotifications = settings?['sms_notifications'] ?? true;
         _appNotifications = settings?['app_notifications'] ?? true;
-        _emailNotifications = settings?['email_notifications'] ?? true;
         _isLoading = false;
       });
     }
@@ -109,22 +105,17 @@ class _NotificationSettingsScreenState
                                   color: AppColors.textPrimary,
                                 ),
                               ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Receive push notifications for attendance updates, leave requests, and important announcements',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
                               const SizedBox(height: 20),
 
-                              // SMS Notifications
-                              _buildNotificationToggle(
-                                title: 'SMS notifications',
-                                value: _smsNotifications,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _smsNotifications = value;
-                                  });
-                                  _updateSetting('sms_notifications', value);
-                                },
-                              ),
-                              const SizedBox(height: 12),
-
-                              // App Notifications
+                              // App Notifications Only
                               _buildNotificationToggle(
                                 title: 'App Notifications',
                                 value: _appNotifications,
@@ -133,19 +124,6 @@ class _NotificationSettingsScreenState
                                     _appNotifications = value;
                                   });
                                   _updateSetting('app_notifications', value);
-                                },
-                              ),
-                              const SizedBox(height: 12),
-
-                              // Email Notifications
-                              _buildNotificationToggle(
-                                title: 'Email Notifications',
-                                value: _emailNotifications,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _emailNotifications = value;
-                                  });
-                                  _updateSetting('email_notifications', value);
                                 },
                               ),
                             ],

@@ -121,139 +121,257 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
       text: employee.fullAddress ?? '',
     );
     final phoneController = TextEditingController(text: employee.phone);
+    // Parse existing shift times or use defaults
+    TimeOfDay shiftStartTime = _parseTimeString(employee.shiftStartTime) ?? const TimeOfDay(hour: 8, minute: 0);
+    TimeOfDay shiftEndTime = _parseTimeString(employee.shiftEndTime) ?? const TimeOfDay(hour: 17, minute: 0);
+
+    // Capture the parent context before showing dialog
+    final parentContext = context;
 
     showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit Employee'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: firstNameController,
-                decoration: const InputDecoration(
-                  labelText: 'First Name *',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: lastNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Last Name *',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: middleNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Middle Name',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: positionController,
-                decoration: const InputDecoration(
-                  labelText: 'Position',
-                  hintText: 'e.g. Barangay Secretary',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: addressController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Full Address',
-                  hintText: 'Enter full address',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              // Validate required fields
-              if (firstNameController.text.trim().isEmpty ||
-                  lastNameController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('First name and last name are required'),
-                    backgroundColor: AppColors.error,
+      context: parentContext,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (statefulContext, setDialogState) => AlertDialog(
+          title: const Text('Edit Employee'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: firstNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'First Name *',
+                    border: OutlineInputBorder(),
                   ),
-                );
-                return;
-              }
-
-              Navigator.pop(dialogContext);
-
-              setState(() => _isLoading = true);
-
-              final adminProvider = context.read<AdminProvider>();
-              final success = await adminProvider.updateEmployee(
-                id: employee.id,
-                firstName: firstNameController.text.trim(),
-                lastName: lastNameController.text.trim(),
-                middleName: middleNameController.text.trim().isNotEmpty
-                    ? middleNameController.text.trim()
-                    : null,
-                phone: phoneController.text.trim().isNotEmpty
-                    ? phoneController.text.trim()
-                    : null,
-                position: positionController.text.trim().isNotEmpty
-                    ? positionController.text.trim()
-                    : null,
-                fullAddress: addressController.text.trim().isNotEmpty
-                    ? addressController.text.trim()
-                    : null,
-              );
-
-              if (mounted) {
-                if (success) {
-                  // Refresh employee data
-                  await _loadEmployeeData();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Employee updated successfully'),
-                      backgroundColor: AppColors.success,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: lastNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Last Name *',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: middleNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Middle Name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: positionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Position',
+                    hintText: 'e.g. Barangay Secretary',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: addressController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Full Address',
+                    hintText: 'Enter full address',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Shift Start Time Picker
+                InkWell(
+                  onTap: () async {
+                    final picked = await showTimePicker(
+                      context: parentContext,
+                      initialTime: shiftStartTime,
+                      builder: (builderContext, child) {
+                        return MediaQuery(
+                          data: MediaQuery.of(builderContext).copyWith(alwaysUse24HourFormat: false),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (picked != null && mounted) {
+                      setDialogState(() {
+                        shiftStartTime = picked;
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade400),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                  );
-                } else {
-                  setState(() => _isLoading = false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        adminProvider.errorMessage ??
-                            'Failed to update employee',
-                      ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.access_time, color: AppColors.textSecondary),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Shift Start Time *',
+                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${shiftStartTime.hourOfPeriod == 0 ? 12 : shiftStartTime.hourOfPeriod}:${shiftStartTime.minute.toString().padLeft(2, '0')} ${shiftStartTime.period == DayPeriod.am ? 'AM' : 'PM'}',
+                                style: const TextStyle(fontSize: 16, color: AppColors.textPrimary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Shift End Time Picker
+                InkWell(
+                  onTap: () async {
+                    final picked = await showTimePicker(
+                      context: parentContext,
+                      initialTime: shiftEndTime,
+                      builder: (builderContext, child) {
+                        return MediaQuery(
+                          data: MediaQuery.of(builderContext).copyWith(alwaysUse24HourFormat: false),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (picked != null && mounted) {
+                      setDialogState(() {
+                        shiftEndTime = picked;
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade400),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.access_time, color: AppColors.textSecondary),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Shift End Time *',
+                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${shiftEndTime.hourOfPeriod == 0 ? 12 : shiftEndTime.hourOfPeriod}:${shiftEndTime.minute.toString().padLeft(2, '0')} ${shiftEndTime.period == DayPeriod.am ? 'AM' : 'PM'}',
+                                style: const TextStyle(fontSize: 16, color: AppColors.textPrimary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Validate required fields
+                if (firstNameController.text.trim().isEmpty ||
+                    lastNameController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(
+                      content: Text('First name and last name are required'),
                       backgroundColor: AppColors.error,
                     ),
                   );
+                  return;
                 }
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
+
+                // Close dialog first
+                Navigator.pop(dialogContext);
+
+                // Now safely use the parent context
+                if (!mounted) return;
+
+                setState(() => _isLoading = true);
+
+                final adminProvider = parentContext.read<AdminProvider>();
+                final success = await adminProvider.updateEmployee(
+                  id: employee.id,
+                  firstName: firstNameController.text.trim(),
+                  lastName: lastNameController.text.trim(),
+                  middleName: middleNameController.text.trim().isNotEmpty
+                      ? middleNameController.text.trim()
+                      : null,
+                  phone: phoneController.text.trim().isNotEmpty
+                      ? phoneController.text.trim()
+                      : null,
+                  position: positionController.text.trim().isNotEmpty
+                      ? positionController.text.trim()
+                      : null,
+                  fullAddress: addressController.text.trim().isNotEmpty
+                      ? addressController.text.trim()
+                      : null,
+                  shiftStartTime: _formatTimeTo24Hour(shiftStartTime),
+                  shiftEndTime: _formatTimeTo24Hour(shiftEndTime),
+                );
+
+                if (!mounted) return;
+
+                if (success) {
+                  // Refresh employee data
+                  await _loadEmployeeData();
+                  if (mounted) {
+                    ScaffoldMessenger.of(parentContext).showSnackBar(
+                      const SnackBar(
+                        content: Text('Employee updated successfully'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  }
+                } else {
+                  setState(() => _isLoading = false);
+                  if (mounted) {
+                    ScaffoldMessenger.of(parentContext).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          adminProvider.errorMessage ??
+                              'Failed to update employee',
+                        ),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -560,6 +678,13 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
             label: 'Employee ID',
             value: employee.employeeId ?? 'Not set',
           ),
+          const SizedBox(height: 12),
+          _buildInfoRow(
+            label: 'Shift Start',
+            value: _formatTimeDisplay(employee.shiftStartTime),
+            secondLabel: 'Shift End',
+            secondValue: _formatTimeDisplay(employee.shiftEndTime),
+          ),
         ],
       ),
     );
@@ -620,11 +745,6 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                 ),
               ],
             ),
-          ),
-          const Icon(
-            Icons.edit_outlined,
-            color: AppColors.textSecondary,
-            size: 18,
           ),
         ],
       ),
@@ -741,5 +861,40 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
         ),
       ],
     );
+  }
+
+  // Helper function to parse time string (HH:MM:SS) to TimeOfDay
+  TimeOfDay? _parseTimeString(String? timeStr) {
+    if (timeStr == null || timeStr.isEmpty) return null;
+    try {
+      final parts = timeStr.split(':');
+      if (parts.length >= 2) {
+        final hour = int.parse(parts[0]);
+        final minute = int.parse(parts[1]);
+        return TimeOfDay(hour: hour, minute: minute);
+      }
+    } catch (e) {
+      // Invalid format, return null
+    }
+    return null;
+  }
+
+  // Helper function to format TimeOfDay to 24-hour string (HH:MM:SS)
+  String _formatTimeTo24Hour(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute:00';
+  }
+
+  // Helper function to display time in AM/PM format
+  String _formatTimeDisplay(String? timeStr) {
+    if (timeStr == null || timeStr.isEmpty) return 'Not set';
+    final time = _parseTimeString(timeStr);
+    if (time == null) return 'Not set';
+    
+    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$hour:$minute $period';
   }
 }

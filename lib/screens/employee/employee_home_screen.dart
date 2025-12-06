@@ -1,8 +1,12 @@
 // lib/screens/employee/employee_home_screen.dart
 
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:flutter_file_dialog/flutter_file_dialog.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/attendance_provider.dart';
@@ -17,6 +21,8 @@ class EmployeeHomeScreen extends StatefulWidget {
 }
 
 class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
+  final GlobalKey _qrKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -24,6 +30,68 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AttendanceProvider>().fetchTodayAttendance();
     });
+  }
+
+  Future<void> _downloadQRCode() async {
+    try {
+      // Capture QR code widget as PNG image
+      RenderRepaintBoundary boundary = 
+          _qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      if (!mounted) return;
+
+      // Use file dialog to let user choose where to save
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'attendify_qr_$timestamp.png';
+      
+      final params = SaveFileDialogParams(
+        data: pngBytes,
+        fileName: fileName,
+        mimeTypesFilter: ['image/png'],
+      );
+      
+      final filePath = await FlutterFileDialog.saveFile(params: params);
+
+      if (!mounted) return;
+
+      if (filePath != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text('QR Code saved successfully!'),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      } else {
+        // User cancelled
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Save cancelled'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   @override
@@ -165,18 +233,21 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
             const SizedBox(height: 30),
 
             // QR Code
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.divider, width: 2),
-              ),
-              child: QrImageView(
-                data: qrData,
-                version: QrVersions.auto,
-                size: 200.0,
-                backgroundColor: AppColors.white,
+            RepaintBoundary(
+              key: _qrKey,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.divider, width: 2),
+                ),
+                child: QrImageView(
+                  data: qrData,
+                  version: QrVersions.auto,
+                  size: 200.0,
+                  backgroundColor: AppColors.white,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -187,6 +258,30 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
                 fontSize: 16,
                 color: AppColors.textSecondary,
                 fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Download button
+            ElevatedButton.icon(
+              onPressed: _downloadQRCode,
+              icon: const Icon(Icons.download, color: Colors.white),
+              label: const Text(
+                'Download QR Code',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.secondary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
           ],

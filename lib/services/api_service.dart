@@ -348,10 +348,32 @@ class ApiService {
   // ==================== ATTENDANCE ENDPOINTS ====================
 
   Future<Map<String, dynamic>> scanAttendance(String qrCode) async {
+    print('[API] POST ${ApiConstants.baseUrl}${ApiConstants.attendanceScan}');
+    print('[API] Headers: $_headers');
+    print('[API] Body: {"qr_code": "$qrCode"}');
+    
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceScan}'),
+        headers: _headers,
+        body: jsonEncode({'qr_code': qrCode}),
+      );
+      
+      print('[API] Response status: ${response.statusCode}');
+      print('[API] Response body: ${response.body}');
+      
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('[API] ❌ Request failed: $e');
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> scanAttendanceFromImage(String base64Image) async {
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceScan}'),
       headers: _headers,
-      body: jsonEncode({'qr_code': qrCode}),
+      body: jsonEncode({'image': base64Image}),
     );
     return jsonDecode(response.body);
   }
@@ -368,6 +390,18 @@ class ApiService {
     final response = await http.get(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceToday}'),
       headers: _headers,
+    );
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> submitEarlyOut(String attendanceId, String reason) async {
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceEarlyOut}'),
+      headers: _headers,
+      body: jsonEncode({
+        'attendance_id': attendanceId,
+        'reason': reason,
+      }),
     );
     return jsonDecode(response.body);
   }
@@ -496,6 +530,8 @@ class ApiService {
     String? position,
     String? fullAddress,
     String? phone,
+    String? shiftStartTime,
+    String? shiftEndTime,
   }) async {
     final response = await http.put(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.adminEmployees}/$id'),
@@ -507,6 +543,8 @@ class ApiService {
         if (position != null) 'position': position,
         if (fullAddress != null) 'full_address': fullAddress,
         if (phone != null) 'phone': phone,
+        if (shiftStartTime != null) 'shift_start_time': shiftStartTime,
+        if (shiftEndTime != null) 'shift_end_time': shiftEndTime,
       }),
     );
     final body = jsonDecode(response.body);

@@ -60,12 +60,16 @@ class _ChangeEmailScreenState extends State<ChangeEmailScreen> {
     if (success) {
       if (mounted) {
         // Navigate to verification screen with the new email
-        Navigator.push(
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => VerifyEmailScreen(newEmail: email),
           ),
         );
+
+        if (result == true && mounted) {
+          Navigator.pop(context, true);
+        }
       }
     } else {
       if (mounted) {
@@ -166,37 +170,6 @@ class _ChangeEmailScreenState extends State<ChangeEmailScreen> {
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: AppColors.accent,
-            ),
-          ),
-
-          const Spacer(),
-
-          // Profile Avatar
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.accent,
-                width: 2,
-              ),
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/images/profile-avatar.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: AppColors.accent,
-                    child: const Icon(
-                      Icons.person,
-                      color: AppColors.white,
-                      size: 24,
-                    ),
-                  );
-                },
-              ),
             ),
           ),
         ],

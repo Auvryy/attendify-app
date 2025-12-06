@@ -189,39 +189,6 @@ class AccountSecurityScreen extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          
-          // Profile Avatar
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.accent,
-              border: Border.all(
-                color: AppColors.accent,
-                width: 2,
-              ),
-            ),
-            child: ClipOval(
-              child: profileImageUrl != null
-                  ? Image.network(
-                      profileImageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.person,
-                          color: AppColors.white,
-                          size: 24,
-                        );
-                      },
-                    )
-                  : const Icon(
-                      Icons.person,
-                      color: AppColors.white,
-                      size: 24,
-                    ),
-            ),
-          ),
         ],
       ),
     );

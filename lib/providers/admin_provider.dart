@@ -163,6 +163,8 @@ class AdminProvider with ChangeNotifier {
     String? position,
     String? fullAddress,
     String? phone,
+    String? shiftStartTime,
+    String? shiftEndTime,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -177,6 +179,8 @@ class AdminProvider with ChangeNotifier {
         position: position,
         fullAddress: fullAddress,
         phone: phone,
+        shiftStartTime: shiftStartTime,
+        shiftEndTime: shiftEndTime,
       );
 
       if (response['error'] != null) {

@@ -263,8 +263,8 @@ class UserProvider with ChangeNotifier {
     try {
       final response = await _apiService.changeEmailSendOtp(newEmail);
       
-      if (response['error'] != null) {
-        _errorMessage = response['error'];
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to send OTP';
         _isLoading = false;
         notifyListeners();
         return false;
@@ -286,7 +286,7 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> changeEmailVerify(String otp, String newEmail) async {
+  Future<bool> changeEmailVerify(String newEmail, String otp) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -294,8 +294,8 @@ class UserProvider with ChangeNotifier {
     try {
       final response = await _apiService.changeEmailVerify(otp, newEmail);
       
-      if (response['error'] != null) {
-        _errorMessage = response['error'];
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Invalid verification code';
         _isLoading = false;
         notifyListeners();
         return false;
@@ -382,8 +382,8 @@ class UserProvider with ChangeNotifier {
     try {
       final response = await _apiService.changePassword(currentPassword, newPassword);
       
-      if (response['error'] != null) {
-        _errorMessage = response['error'];
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to change password';
         _isLoading = false;
         notifyListeners();
         return false;

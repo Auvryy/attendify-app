@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/user_provider.dart';
 import 'password_changed_screen.dart';
+import '../forgot_password_screen.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -20,9 +21,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   bool _isLoading = false;
-  bool _obscureCurrentPassword = true;
-  bool _obscureNewPassword = true;
-  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
@@ -135,7 +133,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       alignment: Alignment.centerLeft,
                       child: TextButton(
                         onPressed: () {
-                          // Handle forgot password
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ForgotPasswordScreen(),
+                            ),
+                          );
                         },
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,
@@ -218,37 +221,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: AppColors.accent,
-            ),
-          ),
-
-          const Spacer(),
-
-          // Profile Avatar
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.accent,
-                width: 2,
-              ),
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/images/profile-avatar.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: AppColors.accent,
-                    child: const Icon(
-                      Icons.person,
-                      color: AppColors.white,
-                      size: 24,
-                    ),
-                  );
-                },
-              ),
             ),
           ),
         ],
