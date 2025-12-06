@@ -4,7 +4,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/notification_provider.dart';
 import 'admin_home_screen.dart';
 import 'admin_employees_screen.dart';
 import 'admin_notifications_screen.dart';
@@ -33,6 +35,15 @@ class _AdminMainLayoutState extends State<AdminMainLayout> {
   bool get _isCameraSupported {
     if (kIsWeb) return false;
     return Platform.isAndroid || Platform.isIOS;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch notifications to get unread count
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationProvider>().fetchNotifications(refresh: true);
+    });
   }
 
   @override
@@ -379,12 +390,17 @@ class _AdminMainLayoutState extends State<AdminMainLayout> {
                   ),
                   // Space for center button
                   const SizedBox(width: 56),
-                  _buildNavItemWithBadge(
-                    icon: Icons.notifications_outlined,
-                    activeIcon: Icons.notifications,
-                    label: 'Notifications',
-                    index: 2,
-                    showBadge: true,
+                  Consumer<NotificationProvider>(
+                    builder: (context, notifProvider, _) {
+                      return _buildNavItemWithBadge(
+                        icon: Icons.notifications_outlined,
+                        activeIcon: Icons.notifications,
+                        label: 'Notifications',
+                        index: 2,
+                        showBadge: notifProvider.hasUnread,
+                        badgeCount: notifProvider.unreadCount,
+                      );
+                    },
                   ),
                   _buildNavItem(
                     icon: Icons.person_outline,
@@ -447,6 +463,7 @@ class _AdminMainLayoutState extends State<AdminMainLayout> {
     required String label,
     required int index,
     bool showBadge = false,
+    int badgeCount = 0,
   }) {
     final isActive = _currentIndex == index;
     return InkWell(
@@ -464,16 +481,28 @@ class _AdminMainLayoutState extends State<AdminMainLayout> {
                   color: isActive ? AppColors.secondary : AppColors.textSecondary,
                   size: 24,
                 ),
-                if (showBadge)
+                if (showBadge && badgeCount > 0)
                   Positioned(
-                    right: -2,
-                    top: -2,
+                    right: -6,
+                    top: -4,
                     child: Container(
-                      width: 8,
-                      height: 8,
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
                       decoration: const BoxDecoration(
-                        color: AppColors.secondary,
+                        color: AppColors.error,
                         shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        badgeCount > 99 ? '99+' : '$badgeCount',
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),

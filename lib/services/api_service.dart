@@ -629,12 +629,7 @@ class ApiService {
       headers: _headers,
     );
     print('[API] getNotifications response: ${response.body}');
-    final body = jsonDecode(response.body);
-    // Backend returns {success, data: {notifications: [...]}}
-    if (body['success'] == true && body['data'] != null) {
-      return body['data'];
-    }
-    return {'error': body['message'] ?? 'Failed to fetch notifications'};
+    return jsonDecode(response.body);
   }
 
   Future<Map<String, dynamic>> markNotificationRead(String id) async {
@@ -642,11 +637,7 @@ class ApiService {
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.notifications}/$id/read'),
       headers: _headers,
     );
-    final body = jsonDecode(response.body);
-    if (body['success'] == true) {
-      return body['data'] ?? {'success': true};
-    }
-    return {'error': body['message'] ?? 'Failed to mark notification as read'};
+    return jsonDecode(response.body);
   }
 
   Future<Map<String, dynamic>> markAllNotificationsRead() async {

@@ -38,14 +38,15 @@ class NotificationProvider with ChangeNotifier {
     try {
       final response = await _apiService.getNotifications(page: _currentPage);
       
-      if (response['error'] != null) {
-        _errorMessage = response['error'];
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to fetch notifications';
         _isLoading = false;
         notifyListeners();
         return false;
       }
       
-      final List<dynamic> records = response['notifications'] ?? [];
+      final data = response['data'] ?? {};
+      final List<dynamic> records = data['notifications'] ?? [];
       final newRecords = records.map((r) => NotificationModel.fromJson(r)).toList();
       
       if (refresh) {
@@ -54,8 +55,8 @@ class NotificationProvider with ChangeNotifier {
         _notifications.addAll(newRecords);
       }
       
-      _totalRecords = response['total'] ?? _notifications.length;
-      _unreadCount = response['unread_count'] ?? _notifications.where((n) => !n.isRead).length;
+      _totalRecords = data['total'] ?? _notifications.length;
+      _unreadCount = _notifications.where((n) => !n.isRead).length;
       _currentPage++;
       
       _isLoading = false;
@@ -77,8 +78,8 @@ class NotificationProvider with ChangeNotifier {
     try {
       final response = await _apiService.markNotificationRead(id);
       
-      if (response['error'] != null) {
-        _errorMessage = response['error'];
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to mark as read';
         notifyListeners();
         return false;
       }
@@ -120,8 +121,8 @@ class NotificationProvider with ChangeNotifier {
     try {
       final response = await _apiService.markAllNotificationsRead();
       
-      if (response['error'] != null) {
-        _errorMessage = response['error'];
+      if (response['success'] != true) {
+        _errorMessage = response['message'] ?? 'Failed to mark all as read';
         _isLoading = false;
         notifyListeners();
         return false;
