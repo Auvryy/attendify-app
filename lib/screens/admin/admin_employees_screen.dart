@@ -18,12 +18,14 @@ class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<UserModel> _filteredEmployees = [];
   String _searchQuery = '';
+  bool _showInactive = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AdminProvider>().fetchEmployees();
+      // Fetch all employees including inactive ones
+      context.read<AdminProvider>().fetchEmployees(activeOnly: false);
     });
   }
 
@@ -38,9 +40,13 @@ class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
     setState(() {
       _searchQuery = query;
       if (query.isEmpty) {
-        _filteredEmployees = provider.employees;
+        _filteredEmployees = [];
       } else {
-        _filteredEmployees = provider.employees
+        // Apply search on status-filtered list
+        final baseList = _showInactive
+            ? provider.employees
+            : provider.employees.where((e) => e.isActive).toList();
+        _filteredEmployees = baseList
             .where((emp) =>
                 emp.fullName.toLowerCase().contains(query.toLowerCase()))
             .toList();
@@ -66,15 +72,21 @@ class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   
+                  // Filter by active/inactive status first
+                  List<UserModel> statusFilteredEmployees = _showInactive
+                      ? provider.employees
+                      : provider.employees.where((e) => e.isActive).toList();
+                  
+                  // Then apply search filter
                   final employees = _searchQuery.isEmpty 
-                      ? provider.employees 
+                      ? statusFilteredEmployees
                       : _filteredEmployees;
                   
                   if (employees.isEmpty && _searchQuery.isEmpty && !provider.isLoading) {
-                    return const Center(
+                    return Center(
                       child: Text(
-                        'No employees found',
-                        style: TextStyle(color: AppColors.textSecondary),
+                        _showInactive ? 'No inactive employees found' : 'No employees found',
+                        style: const TextStyle(color: AppColors.textSecondary),
                       ),
                     );
                   }
@@ -84,7 +96,7 @@ class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Title with search
+                        // Title with filter and search
                         Row(
                           children: [
                             const Text(
@@ -96,6 +108,28 @@ class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
                               ),
                             ),
                             const Spacer(),
+                            // Show inactive toggle
+                            TextButton.icon(
+                              onPressed: () async {
+                                setState(() {
+                                  _showInactive = !_showInactive;
+                                });
+                                // Refetch employees with new filter
+                                await context.read<AdminProvider>().fetchEmployees(activeOnly: !_showInactive);
+                              },
+                              icon: Icon(
+                                _showInactive ? Icons.visibility_off : Icons.visibility,
+                                size: 18,
+                                color: _showInactive ? AppColors.error : AppColors.textSecondary,
+                              ),
+                              label: Text(
+                                _showInactive ? 'Hide Inactive' : 'Show Inactive',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: _showInactive ? AppColors.error : AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
                             IconButton(
                               onPressed: () {
                                 _showSearchDialog();
@@ -121,6 +155,7 @@ class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
                                 final employee = employees[index];
                                 return _buildEmployeeItem(
                                   name: employee.fullName,
+                                  isActive: employee.isActive,
                                   onTap: () {
                                     Navigator.push(
                                       context,
@@ -208,6 +243,7 @@ class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
   Widget _buildEmployeeItem({
     required String name,
     required VoidCallback onTap,
+    bool isActive = true,
   }) {
     return InkWell(
       onTap: onTap,
@@ -215,8 +251,9 @@ class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
+          color: isActive ? AppColors.cardBackground : AppColors.cardBackground.withOpacity(0.6),
           borderRadius: BorderRadius.circular(8),
+          border: isActive ? null : Border.all(color: AppColors.error.withOpacity(0.3), width: 1),
           boxShadow: [
             BoxShadow(
               color: AppColors.shadow,
@@ -228,13 +265,38 @@ class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
         child: Row(
           children: [
             Expanded(
-              child: Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary,
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+                        decoration: isActive ? null : TextDecoration.lineThrough,
+                      ),
+                    ),
+                  ),
+                  if (!isActive)
+                    Container(
+                      margin: const EdgeInsets.only(left: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: AppColors.error, width: 1),
+                      ),
+                      child: const Text(
+                        'INACTIVE',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.error,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             const Icon(
@@ -265,8 +327,11 @@ class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                _searchController.clear();
-                _filterEmployees('');
+                setState(() {
+                  _searchController.clear();
+                  _searchQuery = '';
+                  _filteredEmployees = [];
+                });
                 Navigator.pop(context);
               },
               child: const Text('Clear'),

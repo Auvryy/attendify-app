@@ -478,10 +478,15 @@ class ApiService {
     return {'error': body['message'] ?? 'Failed to fetch dashboard'};
   }
 
-  Future<Map<String, dynamic>> getAdminEmployees({int? barangayId}) async {
+  Future<Map<String, dynamic>> getAdminEmployees({int? barangayId, bool activeOnly = true}) async {
     String url = '${ApiConstants.baseUrl}${ApiConstants.adminEmployees}';
+    List<String> params = [];
     if (barangayId != null) {
-      url += '?barangay_id=$barangayId';
+      params.add('barangay_id=$barangayId');
+    }
+    params.add('active=${activeOnly ? "true" : "false"}');
+    if (params.isNotEmpty) {
+      url += '?${params.join('&')}';
     }
     print('[API] getAdminEmployees url: $url');
     print('[API] getAdminEmployees headers: $_headers');
@@ -517,10 +522,13 @@ class ApiService {
 
   Future<Map<String, dynamic>> updateEmployeeStatus(String id, bool isActive) async {
     final endpoint = isActive ? 'activate' : 'deactivate';
+    print('[API] updateEmployeeStatus: $id to ${isActive ? "active" : "inactive"}');
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.adminEmployees}/$id/$endpoint'),
       headers: _headers,
     );
+    print('[API] updateEmployeeStatus response: ${response.statusCode}');
+    print('[API] updateEmployeeStatus body: ${response.body}');
     final body = jsonDecode(response.body);
     if (body['success'] == true) {
       return body['data'] ?? {'success': true};

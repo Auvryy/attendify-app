@@ -108,6 +108,62 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
     }
   }
 
+  Future<void> _handleReactivateEmployee() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reactivate Employee'),
+        content: Text(
+          'Are you sure you want to reactivate ${_employee?.fullName ?? 'this employee'}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.success),
+            child: const Text('Reactivate'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && _employee != null) {
+      setState(() => _isLoading = true);
+
+      final adminProvider = context.read<AdminProvider>();
+      final success = await adminProvider.updateEmployeeStatus(
+        _employee!.id,
+        true,
+      );
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Employee has been reactivated'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          // Reload employee data to show updated status
+          await _loadEmployeeData();
+        } else {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                adminProvider.errorMessage ?? 'Failed to reactivate employee',
+              ),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   void _showEditDialog(UserModel employee) {
     final firstNameController = TextEditingController(text: employee.firstName);
     final lastNameController = TextEditingController(text: employee.lastName);
@@ -621,31 +677,88 @@ class _AdminEmployeeDetailScreenState extends State<AdminEmployeeDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      employee.role.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          employee.role.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        if (!employee.isActive) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.error.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: AppColors.error, width: 1),
+                            ),
+                            child: const Text(
+                              'INACTIVE',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
               ),
-              // Edit button
-              IconButton(
-                onPressed: () => _showEditDialog(_employee!),
+              // 3-dot menu button
+              PopupMenuButton<String>(
                 icon: const Icon(
-                  Icons.edit_outlined,
-                  color: AppColors.secondary,
-                ),
-              ),
-              // Delete button
-              IconButton(
-                onPressed: _handleDeleteEmployee,
-                icon: const Icon(
-                  Icons.delete_outline,
+                  Icons.more_vert,
                   color: AppColors.textSecondary,
                 ),
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    _showEditDialog(_employee!);
+                  } else if (value == 'deactivate') {
+                    _handleDeleteEmployee();
+                  } else if (value == 'reactivate') {
+                    _handleReactivateEmployee();
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 20, color: AppColors.secondary),
+                        SizedBox(width: 12),
+                        Text('Edit Information'),
+                      ],
+                    ),
+                  ),
+                  if (_employee!.isActive)
+                    const PopupMenuItem(
+                      value: 'deactivate',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline, size: 20, color: AppColors.error),
+                          SizedBox(width: 12),
+                          Text('Deactivate Account'),
+                        ],
+                      ),
+                    )
+                  else
+                    const PopupMenuItem(
+                      value: 'reactivate',
+                      child: Row(
+                        children: [
+                          Icon(Icons.restore, size: 20, color: AppColors.success),
+                          SizedBox(width: 12),
+                          Text('Reactivate Account'),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
