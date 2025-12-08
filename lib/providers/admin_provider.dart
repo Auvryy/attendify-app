@@ -69,7 +69,7 @@ class AdminProvider with ChangeNotifier {
 
   // ==================== EMPLOYEES ====================
 
-  Future<bool> fetchEmployees({int? barangayId}) async {
+  Future<bool> fetchEmployees({int? barangayId, bool activeOnly = false}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -77,6 +77,7 @@ class AdminProvider with ChangeNotifier {
     try {
       final response = await _apiService.getAdminEmployees(
         barangayId: barangayId,
+        activeOnly: activeOnly,
       );
 
       print('[ADMIN PROVIDER] fetchEmployees response: \$response');
@@ -117,7 +118,16 @@ class AdminProvider with ChangeNotifier {
         return null;
       }
 
-      return UserModel.fromJson(response['employee']);
+      final employee = UserModel.fromJson(response['employee']);
+      
+      // Update in the list if exists
+      final index = _employees.indexWhere((e) => e.id == id);
+      if (index != -1) {
+        _employees[index] = employee;
+        notifyListeners();
+      }
+      
+      return employee;
     } catch (e) {
       _errorMessage = 'Network error. Please try again.';
       return null;
@@ -139,9 +149,14 @@ class AdminProvider with ChangeNotifier {
         return false;
       }
 
+      // Update with the returned employee data from backend if available
       final index = _employees.indexWhere((e) => e.id == id);
       if (index != -1) {
-        _employees[index] = _employees[index].copyWith(isActive: isActive);
+        if (response['employee'] != null) {
+          _employees[index] = UserModel.fromJson(response['employee']);
+        } else {
+          _employees[index] = _employees[index].copyWith(isActive: isActive);
+        }
       }
 
       _isLoading = false;
@@ -190,7 +205,11 @@ class AdminProvider with ChangeNotifier {
         return false;
       }
 
-      await fetchEmployees();
+      // Update the employee in the list if it exists
+      final index = _employees.indexWhere((e) => e.id == id);
+      if (index != -1 && response['employee'] != null) {
+        _employees[index] = UserModel.fromJson(response['employee']);
+      }
 
       _isLoading = false;
       notifyListeners();

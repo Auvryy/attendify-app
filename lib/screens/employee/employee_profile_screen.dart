@@ -9,7 +9,7 @@ import '../../providers/user_provider.dart';
 import '../../services/api_service.dart';
 import '../login_screen.dart';
 import 'account_security_screen.dart';
-import 'notification_settings_screen.dart';
+
 import 'about_us_screen.dart';
 
 class EmployeeProfileScreen extends StatefulWidget {
@@ -249,24 +249,6 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => const AccountSecurityScreen(),
-                          ),
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // Settings Section
-                    _buildSectionLabel('Settings'),
-                    const SizedBox(height: 10),
-                    _buildMenuItem(
-                      title: 'Notification Settings',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const NotificationSettingsScreen(),
                           ),
                         );
                       },

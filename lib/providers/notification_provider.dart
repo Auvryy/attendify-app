@@ -38,6 +38,8 @@ class NotificationProvider with ChangeNotifier {
     try {
       final response = await _apiService.getNotifications(page: _currentPage);
       
+      print('[NotificationProvider] Response: $response');
+      
       if (response['success'] != true) {
         _errorMessage = response['message'] ?? 'Failed to fetch notifications';
         _isLoading = false;
@@ -46,7 +48,11 @@ class NotificationProvider with ChangeNotifier {
       }
       
       final data = response['data'] ?? {};
+      print('[NotificationProvider] Data: $data');
+      
       final List<dynamic> records = data['notifications'] ?? [];
+      print('[NotificationProvider] Records count: ${records.length}');
+      
       final newRecords = records.map((r) => NotificationModel.fromJson(r)).toList();
       
       if (refresh) {
@@ -56,13 +62,17 @@ class NotificationProvider with ChangeNotifier {
       }
       
       _totalRecords = data['total'] ?? _notifications.length;
-      _unreadCount = _notifications.where((n) => !n.isRead).length;
+      _unreadCount = data['unread_count'] ?? _notifications.where((n) => !n.isRead).length;
       _currentPage++;
+      
+      print('[NotificationProvider] Total notifications: ${_notifications.length}, unread: $_unreadCount');
       
       _isLoading = false;
       notifyListeners();
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('[NotificationProvider] Error: $e');
+      print('[NotificationProvider] Stack trace: $stackTrace');
       _errorMessage = 'Network error. Please try again.';
       _isLoading = false;
       notifyListeners();
