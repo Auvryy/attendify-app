@@ -634,8 +634,11 @@ class ApiService {
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.notifications}?limit=$limit'),
       headers: _headers,
     );
+    print('[API] getNotifications status: ${response.statusCode}');
     print('[API] getNotifications response: ${response.body}');
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+    print('[API] getNotifications parsed: $body');
+    return body;
   }
 
   Future<Map<String, dynamic>> markNotificationRead(String id) async {

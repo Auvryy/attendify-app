@@ -8,7 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/api_service.dart';
 import '../employee/account_security_screen.dart';
-import '../employee/notification_settings_screen.dart';
+
 import '../employee/about_us_screen.dart';
 import '../login_screen.dart';
 
@@ -256,24 +256,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const AccountSecurityScreen(),
-                              ),
-                            );
-                          },
-                        ),
-
-                        const SizedBox(height: 30),
-
-                        // Settings Section
-                        _buildSectionLabel('Settings'),
-                        const SizedBox(height: 10),
-                        _buildMenuItem(
-                          context: context,
-                          title: 'Notification Settings',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const NotificationSettingsScreen(),
                               ),
                             );
                           },
